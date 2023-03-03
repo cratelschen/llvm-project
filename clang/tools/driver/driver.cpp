@@ -241,6 +241,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
 // Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
+  // Cratels:clang本身也是一个tool,因此这里参数类名为ToolContext
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "

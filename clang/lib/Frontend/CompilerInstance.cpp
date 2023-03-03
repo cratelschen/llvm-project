@@ -993,7 +993,7 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
 }
 
 // High-Level Operations
-
+// Cratels:执行CompileInstance 所持有的 Action 对象
 bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");

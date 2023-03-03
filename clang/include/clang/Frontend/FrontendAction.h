@@ -33,10 +33,19 @@ class ASTMergeAction;
 class CompilerInstance;
 
 /// Abstract base class for actions which can be performed by the frontend.
+// clang-format off
+// Cratels:FrontendAction是处理前端代码的所有action的基类,定义了一些action的基本操作
+// clang-format on
 class FrontendAction {
+  // Cratels:前端的文件信息
   FrontendInputFile CurrentInput;
+
+  // Cratels:ASTUnit 语法树单元
   std::unique_ptr<ASTUnit> CurrentASTUnit;
+
+  // Cratels:编译器实例
   CompilerInstance *Instance;
+
   friend class ASTMergeAction;
   friend class WrapperFrontendAction;
 
@@ -44,6 +53,7 @@ private:
   std::unique_ptr<ASTConsumer> CreateWrappedASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile);
 
+  // Cratels:一些action执行前后的准备以及善后工作的callback
 protected:
   /// @name Implementation Action Interface
   /// @{
@@ -82,15 +92,14 @@ protected:
   ///
   /// \return True on success; on failure ExecutionAction() and
   /// EndSourceFileAction() will not be called.
-  virtual bool BeginSourceFileAction(CompilerInstance &CI) {
-    return true;
-  }
+  virtual bool BeginSourceFileAction(CompilerInstance &CI) { return true; }
 
   /// Callback to run the program action, using the initialized
   /// compiler instance.
   ///
   /// This is guaranteed to only be called between BeginSourceFileAction()
   /// and EndSourceFileAction().
+  // Cratels:真正执行action的方法,纯虚方法,各个基层类需要根据自己的需求来写功能
   virtual void ExecuteAction() = 0;
 
   /// Callback at the end of processing a single input.
@@ -132,9 +141,7 @@ public:
     return (bool)CurrentASTUnit;
   }
 
-  const FrontendInputFile &getCurrentInput() const {
-    return CurrentInput;
-  }
+  const FrontendInputFile &getCurrentInput() const { return CurrentInput; }
 
   StringRef getCurrentFile() const {
     assert(!CurrentInput.isEmpty() && "No current file!");
@@ -240,6 +247,7 @@ public:
 };
 
 /// Abstract base class to use for AST consumer-based frontend actions.
+// Cratels:针对AST抽象语法树所进行的action的基类
 class ASTFrontendAction : public FrontendAction {
 protected:
   /// Implement the ExecuteAction interface by running Sema on
@@ -256,6 +264,7 @@ public:
 
 class PluginASTAction : public ASTFrontendAction {
   virtual void anchor();
+
 public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override = 0;
@@ -329,6 +338,6 @@ public:
   bool hasCodeCompletionSupport() const override;
 };
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif

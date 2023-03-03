@@ -1176,6 +1176,8 @@ bool FrontendAction::shouldEraseOutputFiles() {
 // clang-format on
 void ASTFrontendAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
+
+  // Cratels:如果没有预处理器则直接返回
   if (!CI.hasPreprocessor())
     return;
   // This is a fallback: If the client forgets to invoke this, we mark the
@@ -1194,6 +1196,7 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
+  // Cratels:如果当前CI没有Sema语义分析器,则为其创建语义分析器
   if (!CI.hasSema())
     CI.createSema(getTranslationUnitKind(), CompletionConsumer);
 

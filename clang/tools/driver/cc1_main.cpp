@@ -286,7 +286,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     return PrintEnabledExtensions(Clang->getTargetOpts());
 
   // clang-format off
-  // Cratels:推导出系统默认的 include 路径
+  // Cratels:推导出系统默认的 include 路径如果未指定的话
   // clang-format on
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&

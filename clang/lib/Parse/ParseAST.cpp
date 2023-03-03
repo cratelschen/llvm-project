@@ -110,6 +110,7 @@ void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx,
   ParseAST(*S.get(), PrintStats, SkipFunctionBodies);
 }
 
+// Cratels:分析AST语法树
 void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // Collect global stats on Decls/Stmts (until we have a module streamer).
   if (PrintStats) {
