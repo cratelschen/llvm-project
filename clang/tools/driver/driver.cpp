@@ -214,6 +214,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   StringRef Tool = ArgV[1];
 
   // Cratels: 详细请看本目录 函数指针转换.md
+  // Cratels:函数指针转换为通用指针,便于传参
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   // clang-format off
   // Cratels:使用该 option 时 clang driver退化为 clang 前端，只进行前端的一些 action，包括打印 AST 等 action
