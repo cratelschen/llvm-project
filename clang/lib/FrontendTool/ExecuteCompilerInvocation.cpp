@@ -172,8 +172,14 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
+// clang-format off
+// Cratels:根据CI的内容生成不同的前端Action
+// clang-format on
 std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
+  // clang-format off
+  // Cratels:创建基本对象,后面慢慢添加信息
+  // clang-format on
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
   if (!Act)
     return nullptr;
@@ -184,6 +190,9 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }
 
+  // clang-format off
+// Cratels:这里的宏可以在cmake命令行中进行配置,进而影响代码的编译流程
+// clang-format on
 #if CLANG_ENABLE_ARCMT
   if (CI.getFrontendOpts().ProgramAction != frontend::MigrateSource &&
       CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
@@ -236,6 +245,7 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
 // Cratels:执行具体编译流程
 // clang-format on
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
+  // Cratels:如果存在option -help,直接忽略其他所有option,打印help信息即可
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     driver::getDriverOptTable().printHelp(
@@ -249,6 +259,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -version.
   //
   // FIXME: Use a better -version message?
+  // Cratels:如果存在option -version,直接忽略其他所有option,打印版本信息即可
   if (Clang->getFrontendOpts().ShowVersion) {
     llvm::cl::PrintVersionMessage();
     return true;
@@ -260,6 +271,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   //
   // FIXME: Remove this, one day.
   // This should happen AFTER plugins have been loaded!
+  // clang-format off
+  // Cratels:-mllvm option后面的option是指定传递给llvm core模块的,类似地还有-mmlir
+  // clang-format on
   if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
@@ -306,9 +320,18 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getDiagnostics().hasErrorOccurred())
     return false;
   // Create and execute the frontend action.
+  // clang-format off
+  // Cratels:创建一个前端相关Action,信息来源自CreateFrontendAction(*Clang)中的参数Clang
+  // Cratels:Clang中有所有的option信息,需要执行哪种Action需要用户在option中指定,比如-ast-dump就是打印输出AST
+  // Cratels:这里其实理论上执行的移动或者拷贝构造方法,而不是构造方法
+  // clang-format on
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
     return false;
+
+  // clang-format off
+  // Cratels:ExecuteAction是一个虚函数,各个Action自己实现,我们这里可以去看看-ast-dump对应的Action的实现
+  // clang-format on
   bool Success = Clang->ExecuteAction(*Act);
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));
