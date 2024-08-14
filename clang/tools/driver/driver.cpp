@@ -286,6 +286,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
+  // clang-format off
+  // Cratels:完整编译流程
+  // clang-format on
+
+  // clang-format off
+  // Cratels:CanonicalPrefixes控制 clang-cl 场景下文件的相对路径前缀，是为了适配 windows 以及 gcc 而设置的 option，暂时不深入研究
+  // clang-format on
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
   bool CanonicalPrefixes = true;
@@ -331,6 +338,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                  &llvm::errs());
   }
 
+  // clang-format off
+  // Cratels:获取可执行文件路径
+  // clang-format on
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
 
   // Whether the cc1 tool should be called inside the current process, or if we
@@ -347,6 +357,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
 
+  // clang-format off
+  // Cratels:诊断信息打印器
+  // clang-format on
   TextDiagnosticPrinter *DiagClient =
       new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
@@ -365,7 +378,12 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
+  // clang-format off
+  // Cratels:新建 Driver 实例，Driver 就是 clang 驱动器所对应的类，包括一次完整编译的所有信息
+  // Cratels:这里给出了执行文件路径 path，目标系统的三元组信息以及诊断信息
+  // clang-format on
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
+
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path

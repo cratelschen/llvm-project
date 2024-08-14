@@ -1908,6 +1908,9 @@ void Driver::setUpResponseFiles(Compilation &C, Command &Cmd) {
   Cmd.setResponseFile(C.addTempFile(C.getArgs().MakeArgString(TmpName)));
 }
 
+// clang-format off
+// Cratels:执行编译过程
+// clang-format on
 int Driver::ExecuteCompilation(
     Compilation &C,
     SmallVectorImpl<std::pair<int, const Command *>> &FailingCommands) {
