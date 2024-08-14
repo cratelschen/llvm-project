@@ -136,27 +136,27 @@ private:
   bool DumpDeclTypes;
 };
 
-class ASTDeclNodeLister : public ASTConsumer,
-                          public RecursiveASTVisitor<ASTDeclNodeLister> {
-public:
-  ASTDeclNodeLister(raw_ostream *Out = nullptr)
-      : Out(Out ? *Out : llvm::outs()) {}
+  class ASTDeclNodeLister : public ASTConsumer,
+                            public RecursiveASTVisitor<ASTDeclNodeLister> {
+  public:
+    ASTDeclNodeLister(raw_ostream *Out = nullptr)
+        : Out(Out ? *Out : llvm::outs()) {}
 
-  void HandleTranslationUnit(ASTContext &Context) override {
-    TraverseDecl(Context.getTranslationUnitDecl());
-  }
+    void HandleTranslationUnit(ASTContext &Context) override {
+      TraverseDecl(Context.getTranslationUnitDecl());
+    }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
+    bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-  bool VisitNamedDecl(NamedDecl *D) {
-    D->printQualifiedName(Out);
-    Out << '\n';
-    return true;
-  }
+    bool VisitNamedDecl(NamedDecl *D) {
+      D->printQualifiedName(Out);
+      Out << '\n';
+      return true;
+    }
 
-private:
-  raw_ostream &Out;
-};
+  private:
+    raw_ostream &Out;
+  };
 } // end anonymous namespace
 
 std::unique_ptr<ASTConsumer>
