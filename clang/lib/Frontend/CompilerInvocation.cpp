@@ -761,6 +761,7 @@ using GenerateFn = llvm::function_ref<void(
     CompilerInvocation &, SmallVectorImpl<const char *> &,
     CompilerInvocation::StringAllocator)>;
 
+// TODO: 到此为止
 /// May perform round-trip of command line arguments. By default, the round-trip
 /// is enabled in assert builds. This can be overwritten at run-time via the
 /// "-round-trip-args" and "-no-round-trip-args" command line flags, or via the
@@ -4930,6 +4931,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
                                         ArrayRef<const char *> CommandLineArgs,
                                         DiagnosticsEngine &Diags,
                                         const char *Argv0) {
+  // Cratels:虚拟临时 invocation
   CompilerInvocation DummyInvocation;
 
   return RoundTrip(

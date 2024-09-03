@@ -225,13 +225,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
+  // Cratels:PCH
+  // 通过将头文件提前编译并缓存的方式来减少编译的时间，提前编译的结果需要容器来持有，这里就是在设置这个容器
   auto PCHOps = Clang->getPCHContainerOperations();
+
+  // Cratels:这个容器可以读取已有 PCH 文件，也能写入 PCH 文件到容器中
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
   // Initialize targets first, so that --version shows registered targets.
   // clang-format off
-  // Cratels:再来一次？？
+  // Cratels:为什么再来一次？？
   // clang-format on
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -240,10 +244,15 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
+  // Cratels:新建一个诊断信息管理引擎
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
+  // clang-format off
+  // Cratels:在软件开发中，编译参数的 “round-trip” 是指在编译过程中，源代码文件经过编译器处理后，其编译参数
+  // （如编译选项、宏定义、链接选项等）能够在编译结果中得到保留，并在后续的编译过程中再次使用这些编译参数。
+  // clang-format on
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
@@ -251,7 +260,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // clang-format off
   // Cratels:CreateFromArgs 其实是从 Args 命令行参数中解析所有数据并将其写回到 Clang的 Invocation 属性中
-  // Cratels:Invocation 抽象了一个编译器的编译过程
+  // Cratels:Invocation 抽象了一个编译器的调用过程
   // clang-format on
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);

@@ -205,6 +205,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+
   // Cratels:再次展开 response file并将解析出来的option放进 ArgV 中
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
@@ -214,10 +215,11 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   StringRef Tool = ArgV[1];
 
   // Cratels: 详细请看本目录 函数指针转换.md
-  // Cratels:函数指针转换为通用指针,便于传参
+  // Cratels:函数指针转换为通用指针,便于传参，用于找到真正执行的二进制文件路径
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
+
   // clang-format off
-  // Cratels:使用该 option 时 clang driver退化为 clang 前端，只进行前端的一些 action，包括打印 AST 等 action
+  // Cratels:使用该 option 时 clang driver退化为 clang 前端，而不是作为完整的编译器运行。只进行前端的一些 action，包括打印 AST 等 action
   // clang-format on
   if (Tool == "-cc1")
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
@@ -253,9 +255,16 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // clang-format on
   llvm::InitializeAllTargets();
 
+  // clang-format off
+  // Cratels:BumpPtrAllocator 是一个内存分配器，它在垃圾收集器（garbage collector）的堆（heap）上工作。这种类型的分配器通常用于实现自动内存管理，其中垃圾收集器负责释放不再使用的内存。
+  // Cratels: BumpPtrAllocator 的工作原理是使用一个“bump pointer”来跟踪当前的内存分配位置。
+  // Cratels:每当分配新内存时，它会从当前位置开始分配，并自动更新 bump pointer 以指向下一个可用的内存位置。这种方式简化了内存分配，因为不需要在每次分配时搜索堆以找到可用的内存块。
+  // clang-format on
   llvm::BumpPtrAllocator A;
+  // Cratels:将字符串传入上面分配的内存中,实现字符串的内存自动化管理
   llvm::StringSaver Saver(A);
 
+  // Cratels:一般情况下
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
