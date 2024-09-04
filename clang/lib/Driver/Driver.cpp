@@ -1914,6 +1914,7 @@ void Driver::setUpResponseFiles(Compilation &C, Command &Cmd) {
 int Driver::ExecuteCompilation(
     Compilation &C,
     SmallVectorImpl<std::pair<int, const Command *>> &FailingCommands) {
+  // Cratels:处理fdriver_only option,暂不深究
   if (C.getArgs().hasArg(options::OPT_fdriver_only)) {
     if (C.getArgs().hasArg(options::OPT_v))
       C.getJobs().Print(llvm::errs(), "\n", true);
@@ -1929,6 +1930,7 @@ int Driver::ExecuteCompilation(
 
   // Just print if -### was present.
   if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
+    // Cratels:只打印不操作
     C.getJobs().Print(llvm::errs(), "\n", true);
     return Diags.hasErrorOccurred() ? 1 : 0;
   }
@@ -3194,8 +3196,8 @@ class OffloadingActionBuilder final {
       if (Args.hasArgNoClaim(options::OPT_offload_EQ) &&
           Args.hasArgNoClaim(options::OPT_offload_arch_EQ,
                              options::OPT_no_offload_arch_EQ)) {
-        C.getDriver().Diag(diag::err_opt_not_valid_with_opt) << "--offload-arch"
-                                                             << "--offload";
+        C.getDriver().Diag(diag::err_opt_not_valid_with_opt)
+            << "--offload-arch" << "--offload";
       }
 
       // Collect all offload arch parameters, removing duplicates.
@@ -3424,14 +3426,12 @@ class OffloadingActionBuilder final {
         if (*EmitReloc) {
           if (Relocatable) {
             C.getDriver().Diag(diag::err_opt_not_valid_with_opt)
-                << "-fhip-emit-relocatable"
-                << "-fgpu-rdc";
+                << "-fhip-emit-relocatable" << "-fgpu-rdc";
           }
 
           if (!CompileDeviceOnly) {
             C.getDriver().Diag(diag::err_opt_not_valid_without_opt)
-                << "-fhip-emit-relocatable"
-                << "--cuda-device-only";
+                << "-fhip-emit-relocatable" << "--cuda-device-only";
           }
         }
       }

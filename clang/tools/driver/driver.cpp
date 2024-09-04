@@ -349,7 +349,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // clang-format off
-  // Cratels:获取可执行文件路径
+  // Cratels:获取真正的可执行文件路径:clang链接到clang-20上面
   // clang-format on
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
 
@@ -386,6 +386,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
+  // Cratels:处理warning信息
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
   // clang-format off
@@ -394,6 +395,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // clang-format on
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
 
+  // Cratels:为何会从名字去出发找target与model信息?
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
@@ -417,7 +419,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     llvm::CrashRecoveryContext::Enable();
   }
 
+  // Cratels:在BuildCompilation中进行了命令行的扩充,从原始的输入命令扩展到完整地调用命令行
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+
+  // Cratels:Job代指的是一个编译过程,比如现在编译器前端使用clang进行编译得到obj文件,然后使用ld进行链接得到可执行文件.这就是两个Job.
+  for (auto job : C->getJobs()) {
+    llvm::outs() << job.getExecutable() << "\n";
+    llvm::outs() << job.getArguments().size() << "\n";
+  }
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {

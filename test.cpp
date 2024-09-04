@@ -1,3 +1,4 @@
+#include "./x_add/add.h"
 #include <iostream>
 
 using namespace std;
@@ -19,6 +20,9 @@ A getA() {
 }
 
 int main(int argc, const char **argv) {
+
+  int i = add(1, 2);
+  std::cout << i << std::endl;
 
   A act(getA());
 
