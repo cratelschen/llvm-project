@@ -130,6 +130,7 @@ public:
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
+  bool VisitVectorBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E);
@@ -341,6 +342,10 @@ private:
     return FPO.getRoundingMode();
   }
 
+  uint32_t getFPOptions(const Expr *E) const {
+    return E->getFPFeaturesInEffect(Ctx.getLangOpts()).getAsOpaqueInt();
+  }
+
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
@@ -359,7 +364,6 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const QualType BaseType,
