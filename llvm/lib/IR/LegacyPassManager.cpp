@@ -625,8 +625,13 @@ void PMTopLevelManager::collectLastUses(SmallVectorImpl<Pass *> &LastUses,
 }
 
 AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
+  // Cratels:创建一个空的 AnalysisUsage 指针
   AnalysisUsage *AnUsage = nullptr;
+
+  // Cratels:尝试从AnUsageMap中查找是否已经有与 Pass 匹配的AnalysisUsage 实例
+  // Cratels:如果有则直接返回该对象
   auto DMI = AnUsageMap.find(P);
+
   if (DMI != AnUsageMap.end())
     AnUsage = DMI->second;
   else {
