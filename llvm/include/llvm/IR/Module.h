@@ -62,9 +62,7 @@ class VersionTuple;
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalList.
 /// The main container class for the LLVM Intermediate Representation.
-// Cratels:Module的概念类似于TU,是LLVM
-// IR的最高层级的容器,内部包括一系列全局变量,方法定义,依赖库,符号表以及大量目标相关的数据
-class LLVM_EXTERNAL_VISIBILITY Module {
+class LLVM_ABI Module {
   /// @name Types And Enumerations
   /// @{
 public:
