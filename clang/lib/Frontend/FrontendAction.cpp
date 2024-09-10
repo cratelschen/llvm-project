@@ -1070,13 +1070,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 // Cratels:编译器实例调用前端的Execute方法
 // clang-format on
 llvm::Error FrontendAction::Execute() {
+  // Cratels:获取编译器实例
   CompilerInstance &CI = getCompilerInstance();
 
-  // clang-format off
-  // Cratels:调用FrontAction的ExecuteAction方法,各个之类自己实现操作
-  // clang-format on
   if (CI.hasFrontendTimer()) {
     llvm::TimeRegion Timer(CI.getFrontendTimer());
+    // clang-format off
+    // Cratels:调用FrontAction的ExecuteAction方法,各个子类自己实现操作
+    // Cratels:针对所有前端AST相关的action,该方法直接在类ASTFrontendAction中实现
+    // clang-format on
     ExecuteAction();
   } else
     ExecuteAction();
@@ -1175,6 +1177,8 @@ bool FrontendAction::shouldEraseOutputFiles() {
 // Cratels:所有前端相关的Action都调用这个方法
 // clang-format on
 void ASTFrontendAction::ExecuteAction() {
+
+  // Cratels:获得编译器实例(手动保证其为同一个对象)
   CompilerInstance &CI = getCompilerInstance();
 
   // Cratels:如果没有预处理器则直接返回
@@ -1187,11 +1191,13 @@ void ASTFrontendAction::ExecuteAction() {
 
   // FIXME: Move the truncation aspect of this into Sema, we delayed this till
   // here so the source manager would be initialized.
+  // Cratels:IDE代码补全相关,暂时不处理
   if (hasCodeCompletionSupport() &&
       !CI.getFrontendOpts().CodeCompletionAt.FileName.empty())
     CI.createCodeCompletionConsumer();
 
   // Use a code completion consumer?
+  // Cratels:想要怎样去使用AST信息
   CodeCompleteConsumer *CompletionConsumer = nullptr;
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();

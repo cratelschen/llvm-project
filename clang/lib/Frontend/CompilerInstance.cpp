@@ -1011,6 +1011,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   raw_ostream &OS = getVerboseOutputStream();
 
+  // Cratels:方法最终实现为FrontendAction::PrepareToExecuteAction的抽象方法,具体Action具体实现,不实现就默认返回true.
   if (!Act.PrepareToExecute(*this))
     return false;
 

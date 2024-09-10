@@ -36,6 +36,7 @@ using namespace llvm::opt;
 
 namespace clang {
 
+// Cratels:根据FrontendOptions中的参数生成不同类型的Action对象
 static std::unique_ptr<FrontendAction>
 CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
@@ -178,9 +179,10 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
   // clang-format off
-  // Cratels:创建基本对象,后面慢慢添加信息
+  // Cratels:创建Action对象,后面步骤为添加一些额外信息
   // clang-format on
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
+
   if (!Act)
     return nullptr;
 
@@ -273,6 +275,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // This should happen AFTER plugins have been loaded!
   // clang-format off
   // Cratels:-mllvm option后面的option是指定传递给llvm core模块的,类似地还有-mmlir
+  // Cratels:有一些参数必须使用该方法传递
   // clang-format on
   if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
@@ -333,6 +336,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Cratels:ExecuteAction是一个虚函数,各个Action自己实现,我们这里可以去看看-ast-dump对应的Action的实现
   // clang-format on
   bool Success = Clang->ExecuteAction(*Act);
+
+  // Cratels:
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));
   return Success;
