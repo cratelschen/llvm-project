@@ -242,7 +242,7 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
 }
 
 // clang-format off
-// Cratels:执行具体编译流程
+// Cratels:前摇终于结束了,这里开始执行具体编译流程
 // clang-format on
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Cratels:如果存在option -help,直接忽略其他所有option,打印help信息即可

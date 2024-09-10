@@ -212,30 +212,29 @@ static int PrintEnabledExtensions(const TargetOptions &TargetOpts) {
 }
 
 // clang-format off
-// Cratels:作为前端使用
+// Cratels:作为真正编译器使用,不包括链接过程
 // clang-format on
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
   // clang-format off
-  // Cratels:Clang 对象是编译器的实例，拥有编译器进行一次编译的所有信息。这里其实采用了单例模式
+  // Cratels:Clang 对象是编译器的实例，拥有编译器进行一次编译的所有信息
   // clang-format on
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
-  // Cratels:PCH
-  // 通过将头文件提前编译并缓存的方式来减少编译的时间，提前编译的结果需要容器来持有，这里就是在设置这个容器
+  // clang-format off
+  // Cratels:PCH通过将头文件提前编译并缓存的方式来减少编译的时间，提前编译的结果需要容器来持有，这里就是在设置这个容器
+  // clang-format on
   auto PCHOps = Clang->getPCHContainerOperations();
-
   // Cratels:这个容器可以读取已有 PCH 文件，也能写入 PCH 文件到容器中
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
   // Initialize targets first, so that --version shows registered targets.
   // clang-format off
-  // Cratels:为什么再来一次？？
+  // Cratels:初始化与目标机器相关的一些信息
   // clang-format on
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -245,13 +244,16 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   // Cratels:新建一个诊断信息管理引擎
+  // Cratels:IntrusiveRefCntPtr是一个智能指针,它指向的对象是通过引用计数来自动管理的,一旦引用计数为0则该对象就会被回收内存
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  // Cratels:存储诊断信息
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
+  // Cratels:新建诊断引擎
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
   // clang-format off
-  // Cratels:在软件开发中，编译参数的 “round-trip” 是指在编译过程中，源代码文件经过编译器处理后，其编译参数
-  // （如编译选项、宏定义、链接选项等）能够在编译结果中得到保留，并在后续的编译过程中再次使用这些编译参数。
+  // Cratels:round-tri是指启用一个特殊的编译过程，该过程包括将源代码编译成中间代码，然后将中间代码反编译回源代码，最后再次编译源代码。这个过程被称为“round-trip”测试。
+  // Cratels:这个选项的主要目的是验证编译器的优化行为是否正确，即优化后的代码是否能够被编译器再次编译为相同的源代码。这对于确保编译器的质量和可靠性非常重要。
   // clang-format on
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
@@ -259,14 +261,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                       diag::Severity::Remark, {});
 
   // clang-format off
-  // Cratels:CreateFromArgs 其实是从 Args 命令行参数中解析所有数据并将其写回到 Clang的 Invocation 属性中
+  // Cratels:CreateFromArgs从 Args中解析所有命令行数据并将其写回到 Clang的 Invocation 属性中
   // Cratels:Invocation 抽象了一个编译器的调用过程
   // clang-format on
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
   // clang-format off
-  // Cratels:根据解析出来的 option 来进行对应的处理，比如是否计时，是否答应出支持的 CPU 的信息等等
+  // Cratels:根据解析出来的 option 来进行对应的处理，比如是否计时，是否打印出支持的 CPU 的信息等等
   // clang-format on
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(

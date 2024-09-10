@@ -3,6 +3,7 @@
 # 设置当前项目支持的 cmake 最小版本
 cmake_minimum_required(VERSION 3.20.0)
 
+# 在 CMake 中，include(CMakeDependentOption) 是一个命令，用于包含 CMake 模块，该模块提供了 cmake_dependent_option() 函数。这个函数允许你创建一个依赖于其他选项的选项。这意味着你可以根据一个选项的值来启用或禁用另一个选项。
 include(CMakeDependentOption)
 
 # 设置LLVM_COMMON_CMAKE_UTILS指向最外侧 cmake 公共目录的路径，接下来直接使用

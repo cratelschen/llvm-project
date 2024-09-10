@@ -197,6 +197,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
+// Cratels:执行-cc1的具体操作
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
                           const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
@@ -205,17 +206,22 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   // driver.
   llvm::cl::ResetAllOptionOccurrences();
 
+  // Cratels:将ExpansionContext类型的对象ECtx分配在堆上,其内存管理交给BumpPtrAllocator来管理
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
 
   // Cratels:再次展开 response file并将解析出来的option放进 ArgV 中
+  // Cratels:第一次展开出来了-cc1,然后后续依然有response
+  // file的可能,因此需要二次展开,
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
+  // Cratels:获取正在调用的工具名,比如clang
   StringRef Tool = ArgV[1];
 
+  // Cratels:GetExecutablePath是一个方法,用了获得可执行文件的真实路径,我们不在这里直接将其调用,而是以参数的形式传入具体的方法中去调用
   // Cratels: 详细请看本目录 函数指针转换.md
   // Cratels:函数指针转换为通用指针,便于传参，用于找到真正执行的二进制文件路径
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
@@ -230,7 +236,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   if (Tool == "-cc1as")
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
 
-  // Cratels:
+  // Cratels:处理代码复现
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
@@ -240,21 +246,31 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
       << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
-
+// Cratels:
 // Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的
+// Cratels:
+// Cratels:clang本身也是一个tool,因此这里参数类名为ToolContext
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
-  // Cratels:clang本身也是一个tool,因此这里参数类名为ToolContext
   noteBottomOfStack();
+
+  // Cratels:设置,并未调用
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
+
+  // Cratels:保存所有命令行参数
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
+  // clang-format off
+// Cratels:FixupStandardFileDescriptors确保所有的标准文件描述符(标准输入,标准输出以及标准错误)在使用前被正确配置了.
+// Cratels:只有当target为可执行文件的程序可以调用该方法,target为库的程序不应该调用它.因为库的该属性应该有调用方程序来决定.
+  // clang-format on
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
 
   // clang-format off
-  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets
+  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets;
+  // Cratels:cmake获得命令行中的指定宏的值,然后根据这些值生成def文件,def文件又被其他源码引入使用(include),从而使得command option影响源码的作用
   // clang-format on
   llvm::InitializeAllTargets();
 
@@ -267,7 +283,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // Cratels:将字符串传入上面分配的内存中,实现字符串的内存自动化管理
   llvm::StringSaver Saver(A);
 
-  // Cratels:一般情况下
+  // Cratels:获取命令行执行的可执行文件名
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
