@@ -210,9 +210,10 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
 
+  // clang-format off
   // Cratels:再次展开 response file并将解析出来的option放进 ArgV 中
-  // Cratels:第一次展开出来了-cc1,然后后续依然有response
-  // file的可能,因此需要二次展开,
+  // Cratels:第一次展开出来了-cc1,然后后续依然有response file的可能,因此需要二次展开
+  // clang-format on
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
