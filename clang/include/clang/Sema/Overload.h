@@ -225,9 +225,6 @@ class Sema;
     /// HLSL Scalar Widening with promotion
     ICR_HLSL_Scalar_Widening_Promotion,
 
-    /// HLSL Matching Dimension Reduction
-    ICR_HLSL_Dimension_Reduction,
-
     /// Conversion
     ICR_Conversion,
 
@@ -249,6 +246,9 @@ class Sema;
     /// Conversion not allowed by the C standard, but that we accept as an
     /// extension anyway.
     ICR_C_Conversion_Extension,
+
+    /// HLSL Matching Dimension Reduction
+    ICR_HLSL_Dimension_Reduction,
 
     /// HLSL Dimension reduction with promotion
     ICR_HLSL_Dimension_Reduction_Promotion,
@@ -925,6 +925,11 @@ class Sema;
 
     bool TookAddressOfOverload : 1;
 
+    /// Have we matched any packs on the parameter side, versus any non-packs on
+    /// the argument side, in a context where the opposite matching is also
+    /// allowed?
+    bool HasMatchedPackOnParmToNonPackOnArg : 1;
+
     /// True if the candidate was found using ADL.
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
@@ -999,8 +1004,9 @@ class Sema;
     friend class OverloadCandidateSet;
     OverloadCandidate()
         : IsSurrogate(false), IgnoreObjectArgument(false),
-          TookAddressOfOverload(false), IsADLCandidate(CallExpr::NotADL),
-          RewriteKind(CRK_None) {}
+          TookAddressOfOverload(false),
+          HasMatchedPackOnParmToNonPackOnArg(false),
+          IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++

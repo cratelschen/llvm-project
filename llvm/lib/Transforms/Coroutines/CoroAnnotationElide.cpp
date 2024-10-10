@@ -16,7 +16,6 @@
 
 #include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 
-#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
@@ -79,7 +78,7 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
   } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
     NewCB = InvokeInst::Create(NewCallee->getFunctionType(), NewCallee,
                                II->getNormalDest(), II->getUnwindDest(),
-                               NewArgs, std::nullopt, "", NewCBInsertPt);
+                               NewArgs, {}, "", NewCBInsertPt);
   } else {
     llvm_unreachable("CallBase should either be Call or Invoke!");
   }
@@ -96,60 +95,60 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
   CB->eraseFromParent();
 }
 
-PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
-                                               CGSCCAnalysisManager &AM,
-                                               LazyCallGraph &CG,
-                                               CGSCCUpdateResult &UR) {
+PreservedAnalyses CoroAnnotationElidePass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
   bool Changed = false;
-  CallGraphUpdater CGUpdater;
-  CGUpdater.initialize(CG, C, AM, UR);
 
-  auto &FAM =
-      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  Function *NewCallee =
+      F.getParent()->getFunction((F.getName() + ".noalloc").str());
 
-  for (LazyCallGraph::Node &N : C) {
-    Function *Callee = &N.getFunction();
-    Function *NewCallee = Callee->getParent()->getFunction(
-        (Callee->getName() + ".noalloc").str());
-    if (!NewCallee) {
-      continue;
-    }
+  if (!NewCallee)
+    return PreservedAnalyses::all();
 
-    auto FramePtrArgPosition = NewCallee->arg_size() - 1;
-    auto FrameSize =
-        NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
-    auto FrameAlign =
-        NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
+  auto FramePtrArgPosition = NewCallee->arg_size() - 1;
+  auto FrameSize = NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
+  auto FrameAlign = NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
 
-    SmallVector<CallBase *, 4> Users;
-    for (auto *U : Callee->users()) {
-      if (auto *CB = dyn_cast<CallBase>(U)) {
-        if (CB->getCalledFunction() == Callee)
-          Users.push_back(CB);
-      }
-    }
-
-    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(*Callee);
-
-    for (auto *CB : Users) {
-      auto *Caller = CB->getFunction();
-      if (Caller && Caller->isPresplitCoroutine() &&
-          CB->hasFnAttr(llvm::Attribute::CoroElideSafe)) {
-
-        auto *CallerN = CG.lookup(*Caller);
-        auto *CallerC = CG.lookupSCC(*CallerN);
-        processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
-
-        ORE.emit([&]() {
-          return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
-                 << "'" << ore::NV("callee", Callee->getName())
-                 << "' elided in '" << ore::NV("caller", Caller->getName());
-        });
-        Changed = true;
-        updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
-                                               FAM);
-      }
+  SmallVector<CallBase *, 4> Users;
+  for (auto *U : F.users()) {
+    if (auto *CB = dyn_cast<CallBase>(U)) {
+      if (CB->getCalledFunction() == &F)
+        Users.push_back(CB);
     }
   }
+
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+
+  for (auto *CB : Users) {
+    auto *Caller = CB->getFunction();
+    if (!Caller)
+      continue;
+
+    bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
+    bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
+    if (IsCallerPresplitCoroutine && HasAttr) {
+      processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
+
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
+               << "'" << ore::NV("callee", F.getName()) << "' elided in '"
+               << ore::NV("caller", Caller->getName()) << "'";
+      });
+
+      FAM.invalidate(*Caller, PreservedAnalyses::none());
+      Changed = true;
+    } else {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElide",
+                                        Caller)
+               << "'" << ore::NV("callee", F.getName()) << "' not elided in '"
+               << ore::NV("caller", Caller->getName()) << "' (caller_presplit="
+               << ore::NV("caller_presplit", IsCallerPresplitCoroutine)
+               << ", elide_safe_attr=" << ore::NV("elide_safe_attr", HasAttr)
+               << ")";
+      });
+    }
+  }
+
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

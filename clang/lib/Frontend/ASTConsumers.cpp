@@ -118,8 +118,11 @@ private:
   raw_ostream &Out;
   std::unique_ptr<raw_ostream> OwnedOut;
 
-  /// How to output individual declarations.
-  Kind OutputKind;
+      if (DumpDeclTypes) {
+        Decl *InnerD = D;
+        if (auto *TD = dyn_cast<TemplateDecl>(D))
+          if (Decl *TempD = TD->getTemplatedDecl())
+            InnerD = TempD;
 
   /// What format should the output take?
   ASTDumpOutputFormat OutputFormat;

@@ -31,6 +31,11 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#if CLANG_ENABLE_CIR
+#include "clang/CIR/FrontendAction/CIRGenAction.h"
+#endif
+
 using namespace clang;
 using namespace llvm::opt;
 
@@ -42,6 +47,13 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
   StringRef Action("unknown");
   (void)Action;
+
+  unsigned UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
+  frontend::ActionKind Act = CI.getFrontendOpts().ProgramAction;
+  bool EmitsCIR = Act == EmitCIR;
+
+  if (!UseCIR && EmitsCIR)
+    llvm::report_fatal_error("-emit-cir and only valid when using -fclangir");
 
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:
@@ -63,17 +75,16 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case EmitBC:
     return std::make_unique<EmitBCAction>();
   case EmitCIR:
+#if CLANG_ENABLE_CIR
+    return std::make_unique<::cir::EmitCIRAction>();
+#else
     llvm_unreachable("CIR suppport not built into clang");
-  case EmitHTML:
-    return std::make_unique<HTMLPrintAction>();
-  case EmitLLVM:
-    return std::make_unique<EmitLLVMAction>();
-  case EmitLLVMOnly:
-    return std::make_unique<EmitLLVMOnlyAction>();
-  case EmitCodeGenOnly:
-    return std::make_unique<EmitCodeGenOnlyAction>();
-  case EmitObj:
-    return std::make_unique<EmitObjAction>();
+#endif
+  case EmitHTML:               return std::make_unique<HTMLPrintAction>();
+  case EmitLLVM:               return std::make_unique<EmitLLVMAction>();
+  case EmitLLVMOnly:           return std::make_unique<EmitLLVMOnlyAction>();
+  case EmitCodeGenOnly:        return std::make_unique<EmitCodeGenOnlyAction>();
+  case EmitObj:                return std::make_unique<EmitObjAction>();
   case ExtractAPI:
     return std::make_unique<ExtractAPIAction>();
   case FixIt:
