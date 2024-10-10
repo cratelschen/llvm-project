@@ -60,6 +60,8 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
   // instrumenting callbacks for the passes later.
   // Here we use std::tuple wrapper over getResult which helps to extract
   // AnalysisManager's arguments out of the whole ExtraArgs set.
+  // Cratels:PassInstrumentationAnalysis为用户自定义Pass执行前后的callback提供了时机
+  // Cratels:其实质也是一个Pass,不过它使用来执行callback的
   PassInstrumentation PI =
       detail::getAnalysisResult<PassInstrumentationAnalysis>(
           AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
@@ -90,6 +92,7 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
 
     // Finally, intersect the preserved analyses to compute the aggregate
     // preserved set for this pass manager.
+    // Cratels:将PA的值与当前PassA的值取交集并赋值给PA
     PA.intersect(std::move(PassPA));
   }
 

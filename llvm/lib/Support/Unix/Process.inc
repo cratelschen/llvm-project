@@ -225,6 +225,8 @@ private:
 };
 } // namespace
 
+// Cratels:重定向标准输出
+// Cratels:在某些情况下，你可能需要重定向或修改这些标准文件描述符，比如在编写一个守护进程时，你可能希望将标准输出和标准错误输出重定向到一个日志文件中，而不是直接输出到控制台。
 std::error_code Process::FixupStandardFileDescriptors() {
   int NullFD = -1;
   FDCloser FDC(NullFD);

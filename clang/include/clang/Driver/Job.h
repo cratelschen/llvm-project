@@ -103,6 +103,7 @@ struct ResponseFileSupport {
 
 /// Command - An executable path/name and argument vector to
 /// execute.
+// Cratels:命令行, 但是命令行是如何过渡到Jobs的??
 class Command {
   /// Source - The action which caused the creation of this job.
   const Action &Source;
@@ -156,10 +157,11 @@ class Command {
   /// argv, excluding the ones passed in a response file.
   void buildArgvForResponseFile(llvm::SmallVectorImpl<const char *> &Out) const;
 
-  /// Encodes an array of C strings into a single string separated by whitespace.
-  /// This function will also put in quotes arguments that have whitespaces and
-  /// will escape the regular backslashes (used in Windows paths) and quotes.
-  /// The results are the contents of a response file, written into a raw_ostream.
+  /// Encodes an array of C strings into a single string separated by
+  /// whitespace. This function will also put in quotes arguments that have
+  /// whitespaces and will escape the regular backslashes (used in Windows
+  /// paths) and quotes. The results are the contents of a response file,
+  /// written into a raw_ostream.
   void writeResponseFile(raw_ostream &OS) const;
 
 public:
@@ -270,8 +272,8 @@ private:
   list_type Jobs;
 
 public:
-  void Print(llvm::raw_ostream &OS, const char *Terminator,
-             bool Quote, CrashReportInfo *CrashInfo = nullptr) const;
+  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
+             CrashReportInfo *CrashInfo = nullptr) const;
 
   /// Add a job to the list (taking ownership).
   void addJob(std::unique_ptr<Command> J) { Jobs.push_back(std::move(J)); }
