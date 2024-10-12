@@ -1,4 +1,5 @@
 set( LLVM_LINK_COMPONENTS
+  # main入口文件就参照这个路径下
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
   CodeGen
@@ -23,6 +24,7 @@ if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
 endif()
 
+# add_clang_tool的意思就是添加clang可执行文件
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp

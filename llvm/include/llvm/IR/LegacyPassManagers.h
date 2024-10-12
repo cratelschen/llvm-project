@@ -292,6 +292,7 @@ private:
 
 /// PMDataManager provides the common place to manage the analysis data
 /// used by pass managers.
+// Cratels:PM analysis 信息管理类
 class PMDataManager {
 public:
   explicit PMDataManager() { initializeAnalysisInfo(); }

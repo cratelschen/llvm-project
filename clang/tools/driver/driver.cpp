@@ -71,7 +71,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
-  void *P = (void*) (intptr_t) GetExecutablePath;
+  void *P = (void *)(intptr_t)GetExecutablePath;
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
@@ -104,10 +104,10 @@ static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
   }
 
   if (NameParts.TargetIsValid) {
-    const char *arr[] = {"-target", GetStableCStr(SavedStrings,
-                                                  NameParts.TargetPrefix)};
-    ArgVector.insert(ArgVector.begin() + InsertionPoint,
-                     std::begin(arr), std::end(arr));
+    const char *arr[] = {"-target",
+                         GetStableCStr(SavedStrings, NameParts.TargetPrefix)};
+    ArgVector.insert(ArgVector.begin() + InsertionPoint, std::begin(arr),
+                     std::end(arr));
   }
 }
 
@@ -197,26 +197,63 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
+// Cratels:执行-cc1的具体操作
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
                           const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
   // driver.
+
+  llvm::outs() << "打印传入ExecuteCC1Tool的参数列表...\n";
+  for (const auto *option : ArgV) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
+  // Cratels:清理已经使用过的option,可以通过打印Args来对比查看
   llvm::cl::ResetAllOptionOccurrences();
 
+  llvm::outs() << "打印reset之后的参数列表...\n";
+  for (const auto *option : ArgV) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
+  // Cratels:将ExpansionContext类型的对象ECtx分配在堆上,其内存管理交给BumpPtrAllocator来管理
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+
+  // clang-format off
+  // Cratels:再次展开 response file并将解析出来的option放进 ArgV 中
+  // Cratels:第一次展开出来了-cc1,然后后续依然有response file的可能,因此需要二次展开
+  // clang-format on
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
+
+  // Cratels:获取正在调用的工具名,比如clang
   StringRef Tool = ArgV[1];
+
+  // Cratels:GetExecutablePath是一个方法,用了获得可执行文件的真实路径,我们不在这里直接将其调用,而是以参数的形式传入具体的方法中去调用
+  // Cratels:详细请看本目录 函数指针转换.md
+  // Cratels:函数指针转换为通用指针,便于传参，用于找到真正执行的二进制文件路径
+  // Cratels:这种转换通常用于需要将函数指针作为参数传递给其他函数，而这些函数可能需要void*类型的参数
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
+
+  // clang-format off
+  // Cratels:使用该 option 时 clang driver退化为 clang 前端，而不是作为完整的编译器运行。只进行前端的一些 action，包括打印 AST 等 action
+  // clang-format on
   if (Tool == "-cc1")
+    // Cratels:这里的slice是将第一个元素从数字中排出的操作
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+
+  // Cratels:处理汇编文件
   if (Tool == "-cc1as")
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
+
+  // Cratels:处理代码复现
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
@@ -226,37 +263,96 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
       << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
-
+// Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的
+// Cratels:clang本身也是一个tool,因此这里参数类名为ToolContext
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
+  // clang-format off
+  // Cratels:快速访问栈底元素：通过记录栈底的位置，可以在需要访问栈底元素时，快速找到它，而不需要遍历整个栈。
+  // Cratels:维护栈的完整性：在执行一系列操作后，如果需要恢复栈的状态，可以通过记录的栈底位置来快速恢复。
+  // clang-format on
   noteBottomOfStack();
+
+  // Cratels:设置,并未调用
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
+
+  // Cratels:保存所有命令行参数
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
+  // Cratels:打印初始传入的options
+  llvm::outs() << "打印传入clang_main的参数列表...\n";
+  for (const auto *option : Args) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
+  // clang-format off
+  // Cratels:FixupStandardFileDescriptors确保所有的标准文件描述符(标准输入,标准输出以及标准错误)在使用前被正确配置了.
+  // Cratels:只有当target为可执行文件的程序可以调用该方法,target为库的程序不应该调用它.因为库的该属性应该有调用方程序来决定.
+  // clang-format on
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
 
+  // clang-format off
+  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets;
+  // Cratels:cmake获得命令行中的指定宏的值,然后根据这些值生成def文件,def文件又被其他源码引入使用(include),从而使得command option影响源码的作用
+  // clang-format on
   llvm::InitializeAllTargets();
 
+  // clang-format off
+  // Cratels:BumpPtrAllocator是一个简单的内存分配器，它使用一个指针（称为“bump pointer”）来跟踪下一个可用的内存位置。
+  // Cratels:每次分配内存时，它会增加指针的位置，直到达到分配的内存上限。
+  // Cratels:这种分配器适用于需要频繁分配和释放小块内存的场景，因为它不需要进行复杂的内存管理操作（如碎片整理）。
+  // Cratels:这段代码的用途是在LLVM库中创建一个StringSaver对象，用于在BumpPtrAllocator分配的内存中存储字符串。这在处理需要大量字符串的场景中非常有用，比如在编译器或解释器中处理源代码或中间表示。
+  // clang-format on
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
 
+  // Cratels:获取命令行执行的可执行文件名
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
+  // clang-format off
+  // Cratels:clang-cl 是一个Clang驱动器的另一个命令行接口的选择，被设计用来兼容Visual C++ 的编译器cl.exe
+  // Cratels:clang --driver-mode可以用来指定 clang driver 的工作模式
+  // Cratels:There are two ways to put clang in CL compatibility mode: ProgName is either clang-cl or cl, or --driver-mode=cl is on the command line
+  // clang-format on
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
+  // clang-format off
+  // Cratels:On some systems (such as older UNIX systems and certain Windows variants) command-lines have relatively limited lengths.
+  // Cratels: Windows compilers therefore support "response files". These files are mentioned on the command-line (using the "@file") syntax.
+  // Cratels: The compiler reads these files and inserts the contents into argv, thereby working around the command-line length limits.
+  // Cratels:一些编译环境（比如 windows）对命令行的长度有限制，不能超过 127字符，但是现实环境中确实存在很长命令行的需求，此时可以使用 response file 来绕过这个限制
+  // Cratels:详细信息请看：https://learn.microsoft.com/en-us/cpp/build/reference/at-specify-a-compiler-response-file?view=msvc-170
+  // Cratels:见本目录的 response_file.md文档
+  // Cratels:这里的操作就是展开 response file 并将其内容写入 Args 里面
+  // clang-format on
   if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
   // Handle -cc1 integrated tools.
+  // clang-format off
+  // Cratels:指定-cc1系列 option时的处理逻辑,此时只进行源码按照输入option进行编译流程,不进行链接
+  // clang-format on
   if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
+  // clang-format off
+  // Cratels:============================================================================================================================================
+  // Cratels:============================================================================================================================================
+  // Cratels:完整编译流程
+  // Cratels:============================================================================================================================================
+  // Cratels:============================================================================================================================================
+  // clang-format on
+
+  // clang-format off
+  // Cratels:CanonicalPrefixes控制 clang-cl 场景下文件的相对路径前缀，是为了适配 windows 以及 gcc 而设置的 option，暂时不深入研究
+  // clang-format on
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
   bool CanonicalPrefixes = true;
@@ -302,6 +398,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                  &llvm::errs());
   }
 
+  // clang-format off
+  // Cratels:获取真正的可执行文件路径:clang链接到clang-20上面
+  // clang-format on
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
 
   // Whether the cc1 tool should be called inside the current process, or if we
@@ -318,8 +417,11 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  // clang-format off
+  // Cratels:诊断信息打印器
+  // clang-format on
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -334,9 +436,16 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
+  // Cratels:处理warning信息
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
+  // clang-format off
+  // Cratels:新建 Driver 实例，Driver 就是 clang 驱动器所对应的类，包括一次完整编译的所有信息
+  // Cratels:这里给出了执行文件路径 path，目标系统的三元组信息以及诊断信息
+  // clang-format on
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
+
+  // Cratels:为何会从名字去出发找target与model信息?
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
@@ -360,7 +469,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     llvm::CrashRecoveryContext::Enable();
   }
 
+  // Cratels:在BuildCompilation中进行了命令行的扩充,从原始的输入命令扩展到完整地调用命令行
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+
+  // Cratels:Job代指的是一个编译过程,比如现在编译器前端使用clang进行编译得到obj文件,然后使用ld进行链接得到可执行文件.这就是两个Job.
+  for (auto job : C->getJobs()) {
+    llvm::outs() << job.getExecutable() << "\n";
+    llvm::outs() << job.getArguments().size() << "\n";
+  }
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
@@ -425,8 +541,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     llvm::dbgs() << llvm::getBugReportMsg();
   if (FailingCommand != nullptr &&
-    TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
-                                                  *C, *FailingCommand))
+      TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                    *C, *FailingCommand))
     Res = 1;
 
   Diags.getClient()->finish();

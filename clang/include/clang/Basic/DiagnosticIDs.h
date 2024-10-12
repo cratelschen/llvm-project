@@ -26,82 +26,87 @@ namespace clang {
   class DiagnosticBuilder;
   class SourceLocation;
 
-  // Import the diagnostic enums themselves.
-  namespace diag {
-    enum class Group;
+// Import the diagnostic enums themselves.
+namespace diag {
+enum class Group;
 
-    // Size of each of the diagnostic categories.
-    enum {
-      DIAG_SIZE_COMMON        =  300,
-      DIAG_SIZE_DRIVER        =  400,
-      DIAG_SIZE_FRONTEND      =  200,
-      DIAG_SIZE_SERIALIZATION =  120,
-      DIAG_SIZE_LEX           =  400,
-      DIAG_SIZE_PARSE         =  700,
-      DIAG_SIZE_AST           =  300,
-      DIAG_SIZE_COMMENT       =  100,
-      DIAG_SIZE_CROSSTU       =  100,
-      DIAG_SIZE_SEMA          = 5000,
-      DIAG_SIZE_ANALYSIS      =  100,
-      DIAG_SIZE_REFACTORING   = 1000,
-      DIAG_SIZE_INSTALLAPI    =  100,
-    };
-    // Start position for diagnostics.
-    enum {
-      DIAG_START_COMMON        =                          0,
-      DIAG_START_DRIVER        = DIAG_START_COMMON        + static_cast<int>(DIAG_SIZE_COMMON),
-      DIAG_START_FRONTEND      = DIAG_START_DRIVER        + static_cast<int>(DIAG_SIZE_DRIVER),
-      DIAG_START_SERIALIZATION = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
-      DIAG_START_LEX           = DIAG_START_SERIALIZATION + static_cast<int>(DIAG_SIZE_SERIALIZATION),
-      DIAG_START_PARSE         = DIAG_START_LEX           + static_cast<int>(DIAG_SIZE_LEX),
-      DIAG_START_AST           = DIAG_START_PARSE         + static_cast<int>(DIAG_SIZE_PARSE),
-      DIAG_START_COMMENT       = DIAG_START_AST           + static_cast<int>(DIAG_SIZE_AST),
-      DIAG_START_CROSSTU       = DIAG_START_COMMENT       + static_cast<int>(DIAG_SIZE_COMMENT),
-      DIAG_START_SEMA          = DIAG_START_CROSSTU       + static_cast<int>(DIAG_SIZE_CROSSTU),
-      DIAG_START_ANALYSIS      = DIAG_START_SEMA          + static_cast<int>(DIAG_SIZE_SEMA),
-      DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + static_cast<int>(DIAG_SIZE_ANALYSIS),
-      DIAG_START_INSTALLAPI    = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING),
-      DIAG_UPPER_LIMIT         = DIAG_START_INSTALLAPI    + static_cast<int>(DIAG_SIZE_INSTALLAPI)
-    };
+// Size of each of the diagnostic categories.
+enum {
+  DIAG_SIZE_COMMON = 300,
+  DIAG_SIZE_DRIVER = 400,
+  DIAG_SIZE_FRONTEND = 200,
+  DIAG_SIZE_SERIALIZATION = 120,
+  DIAG_SIZE_LEX = 400,
+  DIAG_SIZE_PARSE = 700,
+  DIAG_SIZE_AST = 300,
+  DIAG_SIZE_COMMENT = 100,
+  DIAG_SIZE_CROSSTU = 100,
+  DIAG_SIZE_SEMA = 5000,
+  DIAG_SIZE_ANALYSIS = 100,
+  DIAG_SIZE_REFACTORING = 1000,
+  DIAG_SIZE_INSTALLAPI = 100,
+};
+// Start position for diagnostics.
+enum {
+  DIAG_START_COMMON = 0,
+  DIAG_START_DRIVER = DIAG_START_COMMON + static_cast<int>(DIAG_SIZE_COMMON),
+  DIAG_START_FRONTEND = DIAG_START_DRIVER + static_cast<int>(DIAG_SIZE_DRIVER),
+  DIAG_START_SERIALIZATION =
+      DIAG_START_FRONTEND + static_cast<int>(DIAG_SIZE_FRONTEND),
+  DIAG_START_LEX =
+      DIAG_START_SERIALIZATION + static_cast<int>(DIAG_SIZE_SERIALIZATION),
+  DIAG_START_PARSE = DIAG_START_LEX + static_cast<int>(DIAG_SIZE_LEX),
+  DIAG_START_AST = DIAG_START_PARSE + static_cast<int>(DIAG_SIZE_PARSE),
+  DIAG_START_COMMENT = DIAG_START_AST + static_cast<int>(DIAG_SIZE_AST),
+  DIAG_START_CROSSTU = DIAG_START_COMMENT + static_cast<int>(DIAG_SIZE_COMMENT),
+  DIAG_START_SEMA = DIAG_START_CROSSTU + static_cast<int>(DIAG_SIZE_CROSSTU),
+  DIAG_START_ANALYSIS = DIAG_START_SEMA + static_cast<int>(DIAG_SIZE_SEMA),
+  DIAG_START_REFACTORING =
+      DIAG_START_ANALYSIS + static_cast<int>(DIAG_SIZE_ANALYSIS),
+  DIAG_START_INSTALLAPI =
+      DIAG_START_REFACTORING + static_cast<int>(DIAG_SIZE_REFACTORING),
+  DIAG_UPPER_LIMIT =
+      DIAG_START_INSTALLAPI + static_cast<int>(DIAG_SIZE_INSTALLAPI)
+};
 
-    class CustomDiagInfo;
+class CustomDiagInfo;
 
-    /// All of the diagnostics that can be emitted by the frontend.
-    typedef unsigned kind;
+/// All of the diagnostics that can be emitted by the frontend.
+typedef unsigned kind;
 
-    // Get typedefs for common diagnostics.
-    enum {
+// Get typedefs for common diagnostics.
+enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
              NOWERROR, SHOWINSYSHEADER, SHOWINSYSMACRO, DEFFERABLE)            \
   ENUM,
 #define COMMONSTART
 #include "clang/Basic/DiagnosticCommonKinds.inc"
-      NUM_BUILTIN_COMMON_DIAGNOSTICS
+  NUM_BUILTIN_COMMON_DIAGNOSTICS
 #undef DIAG
-    };
+};
 
-    /// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs
-    /// to either Ignore (nothing), Remark (emit a remark), Warning
-    /// (emit a warning) or Error (emit as an error).  It allows clients to
-    /// map ERRORs to Error or Fatal (stop emitting diagnostics after this one).
-    enum class Severity {
-      // NOTE: 0 means "uncomputed".
-      Ignored = 1, ///< Do not present this diagnostic, ignore it.
-      Remark = 2,  ///< Present this diagnostic as a remark.
-      Warning = 3, ///< Present this diagnostic as a warning.
-      Error = 4,   ///< Present this diagnostic as an error.
-      Fatal = 5    ///< Present this diagnostic as a fatal error.
-    };
+/// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs
+/// to either Ignore (nothing), Remark (emit a remark), Warning
+/// (emit a warning) or Error (emit as an error).  It allows clients to
+/// map ERRORs to Error or Fatal (stop emitting diagnostics after this one).
+enum class Severity {
+  // NOTE: 0 means "uncomputed".
+  Ignored = 1, ///< Do not present this diagnostic, ignore it.
+  Remark = 2,  ///< Present this diagnostic as a remark.
+  Warning = 3, ///< Present this diagnostic as a warning.
+  Error = 4,   ///< Present this diagnostic as an error.
+  Fatal = 5    ///< Present this diagnostic as a fatal error.
+};
 
-    /// Flavors of diagnostics we can emit. Used to filter for a particular
-    /// kind of diagnostic (for instance, for -W/-R flags).
-    enum class Flavor {
-      WarningOrError, ///< A diagnostic that indicates a problem or potential
-                      ///< problem. Can be made fatal by -Werror.
-      Remark          ///< A diagnostic that indicates normal progress through
-                      ///< compilation.
-    };
-  }
+/// Flavors of diagnostics we can emit. Used to filter for a particular
+/// kind of diagnostic (for instance, for -W/-R flags).
+enum class Flavor {
+  WarningOrError, ///< A diagnostic that indicates a problem or potential
+                  ///< problem. Can be made fatal by -Werror.
+  Remark          ///< A diagnostic that indicates normal progress through
+                  ///< compilation.
+};
+} // namespace diag
 
 class DiagnosticMapping {
   LLVM_PREFERRED_TYPE(diag::Severity)
@@ -175,15 +180,15 @@ public:
   }
 };
 
+// Cratels:用来处理以及搜索诊断 ID。每一个诊断都有一个独一无二的 ID 来标识
 /// Used for handling and querying diagnostic IDs.
 ///
-/// Can be used and shared by multiple Diagnostics for multiple translation units.
+/// Can be used and shared by multiple Diagnostics for multiple translation
+/// units.
 class DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
-  enum Level {
-    Ignored, Note, Remark, Warning, Error, Fatal
-  };
+  enum Level { Ignored, Note, Remark, Warning, Error, Fatal };
 
 private:
   /// Information for uniquing and looking up custom diags.
@@ -384,6 +389,6 @@ private:
   friend class DiagnosticsEngine;
 };
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif

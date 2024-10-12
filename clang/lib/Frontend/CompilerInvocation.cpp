@@ -4982,6 +4982,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
                                         ArrayRef<const char *> CommandLineArgs,
                                         DiagnosticsEngine &Diags,
                                         const char *Argv0) {
+  // Cratels:虚拟临时 invocation
   CompilerInvocation DummyInvocation;
 
   return RoundTrip(
