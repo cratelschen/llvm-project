@@ -28,10 +28,6 @@ using namespace clang;
 /// ASTPrinter - Pretty-printer and dumper of ASTs
 
 namespace {
-
-// clang-format off
-  // Cratels:最终打印AST的操作是ASTPrinter完成的
-// clang-format on
 class ASTPrinter : public ASTConsumer, public RecursiveASTVisitor<ASTPrinter> {
   typedef RecursiveASTVisitor<ASTPrinter> base;
 
@@ -104,7 +100,8 @@ private:
     if (DumpDeclTypes) {
       Decl *InnerD = D;
       if (auto *TD = dyn_cast<TemplateDecl>(D))
-        InnerD = TD->getTemplatedDecl();
+        if (Decl *TempD = TD->getTemplatedDecl())
+          InnerD = TempD;
 
       // FIXME: Support OutputFormat in type dumping.
       // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.
@@ -118,11 +115,8 @@ private:
   raw_ostream &Out;
   std::unique_ptr<raw_ostream> OwnedOut;
 
-      if (DumpDeclTypes) {
-        Decl *InnerD = D;
-        if (auto *TD = dyn_cast<TemplateDecl>(D))
-          if (Decl *TempD = TD->getTemplatedDecl())
-            InnerD = TempD;
+  /// How to output individual declarations.
+  Kind OutputKind;
 
   /// What format should the output take?
   ASTDumpOutputFormat OutputFormat;
@@ -139,27 +133,27 @@ private:
   bool DumpDeclTypes;
 };
 
-  class ASTDeclNodeLister : public ASTConsumer,
-                            public RecursiveASTVisitor<ASTDeclNodeLister> {
-  public:
-    ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
+class ASTDeclNodeLister : public ASTConsumer,
+                          public RecursiveASTVisitor<ASTDeclNodeLister> {
+public:
+  ASTDeclNodeLister(raw_ostream *Out = nullptr)
+      : Out(Out ? *Out : llvm::outs()) {}
 
-    void HandleTranslationUnit(ASTContext &Context) override {
-      TraverseDecl(Context.getTranslationUnitDecl());
-    }
+  void HandleTranslationUnit(ASTContext &Context) override {
+    TraverseDecl(Context.getTranslationUnitDecl());
+  }
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
+  bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-    bool VisitNamedDecl(NamedDecl *D) {
-      D->printQualifiedName(Out);
-      Out << '\n';
-      return true;
-    }
+  bool VisitNamedDecl(NamedDecl *D) {
+    D->printQualifiedName(Out);
+    Out << '\n';
+    return true;
+  }
 
-  private:
-    raw_ostream &Out;
-  };
+private:
+  raw_ostream &Out;
+};
 } // end anonymous namespace
 
 std::unique_ptr<ASTConsumer>

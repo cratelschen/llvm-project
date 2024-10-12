@@ -204,6 +204,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
   // driver.
+  // Cratels:清理已经使用过的option,可以通过打印Args来对比查看
   llvm::cl::ResetAllOptionOccurrences();
 
   // Cratels:将ExpansionContext类型的对象ECtx分配在堆上,其内存管理交给BumpPtrAllocator来管理
@@ -223,7 +224,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   StringRef Tool = ArgV[1];
 
   // Cratels:GetExecutablePath是一个方法,用了获得可执行文件的真实路径,我们不在这里直接将其调用,而是以参数的形式传入具体的方法中去调用
-  // Cratels: 详细请看本目录 函数指针转换.md
+  // Cratels:详细请看本目录 函数指针转换.md
   // Cratels:函数指针转换为通用指针,便于传参，用于找到真正执行的二进制文件路径
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
 
@@ -247,11 +248,13 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
       << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
-// Cratels:
 // Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的
-// Cratels:
 // Cratels:clang本身也是一个tool,因此这里参数类名为ToolContext
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
+  // clang-format off
+  // Cratels:快速访问栈底元素：通过记录栈底的位置，可以在需要访问栈底元素时，快速找到它，而不需要遍历整个栈。
+  // Cratels:维护栈的完整性：在执行一系列操作后，如果需要恢复栈的状态，可以通过记录的栈底位置来快速恢复。
+  // clang-format on
   noteBottomOfStack();
 
   // Cratels:设置,并未调用
@@ -263,8 +266,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
   // clang-format off
-// Cratels:FixupStandardFileDescriptors确保所有的标准文件描述符(标准输入,标准输出以及标准错误)在使用前被正确配置了.
-// Cratels:只有当target为可执行文件的程序可以调用该方法,target为库的程序不应该调用它.因为库的该属性应该有调用方程序来决定.
+  // Cratels:FixupStandardFileDescriptors确保所有的标准文件描述符(标准输入,标准输出以及标准错误)在使用前被正确配置了.
+  // Cratels:只有当target为可执行文件的程序可以调用该方法,target为库的程序不应该调用它.因为库的该属性应该有调用方程序来决定.
   // clang-format on
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
@@ -276,12 +279,12 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   llvm::InitializeAllTargets();
 
   // clang-format off
-  // Cratels:BumpPtrAllocator 是一个内存分配器，它在垃圾收集器（garbage collector）的堆（heap）上工作。这种类型的分配器通常用于实现自动内存管理，其中垃圾收集器负责释放不再使用的内存。
-  // Cratels: BumpPtrAllocator 的工作原理是使用一个“bump pointer”来跟踪当前的内存分配位置。
-  // Cratels:每当分配新内存时，它会从当前位置开始分配，并自动更新 bump pointer 以指向下一个可用的内存位置。这种方式简化了内存分配，因为不需要在每次分配时搜索堆以找到可用的内存块。
+  // Cratels:BumpPtrAllocator是一个简单的内存分配器，它使用一个指针（称为“bump pointer”）来跟踪下一个可用的内存位置。
+  // Cratels:每次分配内存时，它会增加指针的位置，直到达到分配的内存上限。
+  // Cratels:这种分配器适用于需要频繁分配和释放小块内存的场景，因为它不需要进行复杂的内存管理操作（如碎片整理）。
+  // Cratels:这段代码的用途是在LLVM库中创建一个StringSaver对象，用于在BumpPtrAllocator分配的内存中存储字符串。这在处理需要大量字符串的场景中非常有用，比如在编译器或解释器中处理源代码或中间表示。
   // clang-format on
   llvm::BumpPtrAllocator A;
-  // Cratels:将字符串传入上面分配的内存中,实现字符串的内存自动化管理
   llvm::StringSaver Saver(A);
 
   // Cratels:获取命令行执行的可执行文件名
@@ -311,12 +314,18 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
-  // Cratels:指定-cc1系列 option时的处理逻辑
+  // clang-format off
+  // Cratels:指定-cc1系列 option时的处理逻辑,此时只进行源码按照输入option进行编译流程,不进行链接
+  // clang-format on
   if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
   // clang-format off
+  // Cratels:============================================================================================================================================
+  // Cratels:============================================================================================================================================
   // Cratels:完整编译流程
+  // Cratels:============================================================================================================================================
+  // Cratels:============================================================================================================================================
   // clang-format on
 
   // clang-format off
