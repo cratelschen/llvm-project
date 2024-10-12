@@ -215,6 +215,14 @@ static int PrintEnabledExtensions(const TargetOptions &TargetOpts) {
 // Cratels:作为真正编译器使用,不包括链接过程
 // clang-format on
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
+  llvm::outs() << "传递给cc1_main的参数...\n";
+  for (const auto *option : Argv) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
+  llvm::outs() << Argv0 << "\n";
+
   ensureSufficientStack();
 
   // clang-format off

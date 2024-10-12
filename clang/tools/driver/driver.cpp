@@ -204,8 +204,21 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
   // driver.
+
+  llvm::outs() << "打印传入ExecuteCC1Tool的参数列表...\n";
+  for (const auto *option : ArgV) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
   // Cratels:清理已经使用过的option,可以通过打印Args来对比查看
   llvm::cl::ResetAllOptionOccurrences();
+
+  llvm::outs() << "打印reset之后的参数列表...\n";
+  for (const auto *option : ArgV) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
 
   // Cratels:将ExpansionContext类型的对象ECtx分配在堆上,其内存管理交给BumpPtrAllocator来管理
   llvm::BumpPtrAllocator A;
@@ -226,12 +239,14 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   // Cratels:GetExecutablePath是一个方法,用了获得可执行文件的真实路径,我们不在这里直接将其调用,而是以参数的形式传入具体的方法中去调用
   // Cratels:详细请看本目录 函数指针转换.md
   // Cratels:函数指针转换为通用指针,便于传参，用于找到真正执行的二进制文件路径
+  // Cratels:这种转换通常用于需要将函数指针作为参数传递给其他函数，而这些函数可能需要void*类型的参数
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
 
   // clang-format off
   // Cratels:使用该 option 时 clang driver退化为 clang 前端，而不是作为完整的编译器运行。只进行前端的一些 action，包括打印 AST 等 action
   // clang-format on
   if (Tool == "-cc1")
+    // Cratels:这里的slice是将第一个元素从数字中排出的操作
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
 
   // Cratels:处理汇编文件
@@ -264,6 +279,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   // Cratels:保存所有命令行参数
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
+
+  // Cratels:打印初始传入的options
+  llvm::outs() << "打印传入clang_main的参数列表...\n";
+  for (const auto *option : Args) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
 
   // clang-format off
   // Cratels:FixupStandardFileDescriptors确保所有的标准文件描述符(标准输入,标准输出以及标准错误)在使用前被正确配置了.
