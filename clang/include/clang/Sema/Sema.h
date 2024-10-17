@@ -872,8 +872,6 @@ public:
   /// For example, user-defined classes, built-in "id" type, etc.
   Scope *TUScope;
 
-  bool WarnedStackExhausted = false;
-
   void incrementMSManglingNumber() const {
     return CurScope->incrementMSManglingNumber();
   }
@@ -1184,6 +1182,8 @@ protected:
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
   bool WarnedDarwinSDKInfoMissing = false;
+
+  bool WarnedStackExhausted = false;
 
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
@@ -6755,7 +6755,7 @@ public:
 
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
-  ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
+  ExprResult ActOnIntegerConstant(SourceLocation Loc, int64_t Val);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero);
 

@@ -411,13 +411,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
-      ISD::FMINNUM,       ISD::FMAXNUM,       ISD::FMINIMUMNUM,
-      ISD::FMAXIMUMNUM,   ISD::LRINT,         ISD::LLRINT,
-      ISD::LROUND,        ISD::LLROUND,       ISD::STRICT_LRINT,
-      ISD::STRICT_LLRINT, ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
-      ISD::STRICT_FMA,    ISD::STRICT_FADD,   ISD::STRICT_FSUB,
-      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
-      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
+      ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUMNUM,
+      ISD::FMAXIMUMNUM,   ISD::LRINT,          ISD::LLRINT,
+      ISD::LROUND,        ISD::LLROUND,        ISD::STRICT_LRINT,
+      ISD::STRICT_LLRINT, ISD::STRICT_LROUND,  ISD::STRICT_LLROUND,
+      ISD::STRICT_FMA,    ISD::STRICT_FADD,    ISD::STRICT_FSUB,
+      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,    ISD::STRICT_FSQRT,
+      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS, ISD::FCANONICALIZE};
 
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
@@ -441,7 +441,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
       ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN};
+      ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -716,6 +716,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     static const unsigned FloatingPointVecReduceOps[] = {
         ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMINIMUM, ISD::VECREDUCE_FMAXIMUM};
+
+    static const unsigned FloatingPointLibCallOps[] = {
+        ISD::FREM,  ISD::FPOW,   ISD::FCOS, ISD::FSIN,  ISD::FSINCOS, ISD::FEXP,
+        ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2, ISD::FLOG10};
 
     if (!Subtarget.is64Bit()) {
       // We must custom-lower certain vXi64 operations on RV32 due to the vector
@@ -1002,17 +1006,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
       // Expand FP operations that need libcalls.
-      setOperationAction(ISD::FREM, VT, Expand);
-      setOperationAction(ISD::FPOW, VT, Expand);
-      setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FSIN, VT, Expand);
-      setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FEXP, VT, Expand);
-      setOperationAction(ISD::FEXP2, VT, Expand);
-      setOperationAction(ISD::FEXP10, VT, Expand);
-      setOperationAction(ISD::FLOG, VT, Expand);
-      setOperationAction(ISD::FLOG2, VT, Expand);
-      setOperationAction(ISD::FLOG10, VT, Expand);
+      setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1076,7 +1070,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
                           ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_REVERSE},
+                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE},
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
@@ -1096,6 +1090,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEG, VT, Expand);
       setOperationAction(ISD::FABS, VT, Expand);
       setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+
+      // Expand FP operations that need libcalls.
+      setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVII::VLMUL::LMUL_8) {
@@ -1379,7 +1376,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
-          // TODO: Promote to fp32.
+          MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+          // Don't promote f16 vector operations to f32 if f32 vector type is
+          // not legal.
+          // TODO: could split the f16 vector into two vectors and do promotion.
+          if (!isTypeLegal(F32VecVT))
+            continue;
+          setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+          // TODO: Promote VP ops to fp32.
           continue;
         }
 
@@ -3442,7 +3446,9 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
     if (!Elt)
       continue;
     APInt ExpectedVal =
-        (APInt(EltSizeInBits, Idx) * *SeqStepNum).sdiv(*SeqStepDenom);
+        (APInt(EltSizeInBits, Idx, /*isSigned=*/false, /*implicitTrunc=*/true) *
+         *SeqStepNum)
+            .sdiv(*SeqStepDenom);
 
     APInt Addend = *Elt - ExpectedVal;
     if (!SeqAddend)
@@ -20227,7 +20233,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Other;
     }
   } else {
-    if (Constraint == "vr" || Constraint == "vm")
+    if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm")
       return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -20272,6 +20278,19 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           &RISCV::VRN8M1RegClass, &RISCV::VRN2M2RegClass,
           &RISCV::VRN3M2RegClass, &RISCV::VRN4M2RegClass,
           &RISCV::VRN2M4RegClass}) {
+      if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
+        return std::make_pair(0U, RC);
+    }
+  } else if (Constraint == "vd") {
+    for (const auto *RC :
+         {&RISCV::VRNoV0RegClass, &RISCV::VRM2NoV0RegClass,
+          &RISCV::VRM4NoV0RegClass, &RISCV::VRM8NoV0RegClass,
+          &RISCV::VRN2M1NoV0RegClass, &RISCV::VRN3M1NoV0RegClass,
+          &RISCV::VRN4M1NoV0RegClass, &RISCV::VRN5M1NoV0RegClass,
+          &RISCV::VRN6M1NoV0RegClass, &RISCV::VRN7M1NoV0RegClass,
+          &RISCV::VRN8M1NoV0RegClass, &RISCV::VRN2M2NoV0RegClass,
+          &RISCV::VRN3M2NoV0RegClass, &RISCV::VRN4M2NoV0RegClass,
+          &RISCV::VRN2M4NoV0RegClass}) {
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
     }
