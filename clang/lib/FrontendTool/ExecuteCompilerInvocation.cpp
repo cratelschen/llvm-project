@@ -41,6 +41,7 @@ using namespace llvm::opt;
 
 namespace clang {
 
+// Cratels:根据FrontendOptions中的参数生成不同类型的Action对象
 static std::unique_ptr<FrontendAction>
 CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
@@ -55,16 +56,24 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     llvm::report_fatal_error("-emit-cir and only valid when using -fclangir");
 
   switch (CI.getFrontendOpts().ProgramAction) {
-  case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
-  case ASTDump:                return std::make_unique<ASTDumpAction>();
-  case ASTPrint:               return std::make_unique<ASTPrintAction>();
-  case ASTView:                return std::make_unique<ASTViewAction>();
+  case ASTDeclList:
+    return std::make_unique<ASTDeclListAction>();
+  case ASTDump:
+    return std::make_unique<ASTDumpAction>();
+  case ASTPrint:
+    return std::make_unique<ASTPrintAction>();
+  case ASTView:
+    return std::make_unique<ASTViewAction>();
   case DumpCompilerOptions:
     return std::make_unique<DumpCompilerOptionsAction>();
-  case DumpRawTokens:          return std::make_unique<DumpRawTokensAction>();
-  case DumpTokens:             return std::make_unique<DumpTokensAction>();
-  case EmitAssembly:           return std::make_unique<EmitAssemblyAction>();
-  case EmitBC:                 return std::make_unique<EmitBCAction>();
+  case DumpRawTokens:
+    return std::make_unique<DumpRawTokensAction>();
+  case DumpTokens:
+    return std::make_unique<DumpTokensAction>();
+  case EmitAssembly:
+    return std::make_unique<EmitAssemblyAction>();
+  case EmitBC:
+    return std::make_unique<EmitBCAction>();
   case EmitCIR:
 #if CLANG_ENABLE_CIR
     return std::make_unique<::cir::EmitCIRAction>();
@@ -78,7 +87,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case EmitObj:                return std::make_unique<EmitObjAction>();
   case ExtractAPI:
     return std::make_unique<ExtractAPIAction>();
-  case FixIt:                  return std::make_unique<FixItAction>();
+  case FixIt:
+    return std::make_unique<FixItAction>();
   case GenerateModule:
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
@@ -87,14 +97,20 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateReducedModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
-  case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
+  case GeneratePCH:
+    return std::make_unique<GeneratePCHAction>();
   case GenerateInterfaceStubs:
     return std::make_unique<GenerateInterfaceStubsAction>();
-  case InitOnly:               return std::make_unique<InitOnlyAction>();
-  case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
-  case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
-  case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
-  case TemplightDump:          return std::make_unique<TemplightDumpAction>();
+  case InitOnly:
+    return std::make_unique<InitOnlyAction>();
+  case ParseSyntaxOnly:
+    return std::make_unique<SyntaxOnlyAction>();
+  case ModuleFileInfo:
+    return std::make_unique<DumpModuleInfoAction>();
+  case VerifyPCH:
+    return std::make_unique<VerifyPCHAction>();
+  case TemplightDump:
+    return std::make_unique<TemplightDumpAction>();
 
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &Plugin :
@@ -112,11 +128,12 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     }
 
     CI.getDiagnostics().Report(diag::err_fe_invalid_plugin_name)
-      << CI.getFrontendOpts().ActionName;
+        << CI.getFrontendOpts().ActionName;
     return nullptr;
   }
 
-  case PrintPreamble:          return std::make_unique<PrintPreambleAction>();
+  case PrintPreamble:
+    return std::make_unique<PrintPreambleAction>();
   case PrintPreprocessedInput: {
     if (CI.getPreprocessorOutputOpts().RewriteIncludes ||
         CI.getPreprocessorOutputOpts().RewriteImports)
@@ -124,31 +141,42 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<PrintPreprocessedAction>();
   }
 
-  case RewriteMacros:          return std::make_unique<RewriteMacrosAction>();
-  case RewriteTest:            return std::make_unique<RewriteTestAction>();
+  case RewriteMacros:
+    return std::make_unique<RewriteMacrosAction>();
+  case RewriteTest:
+    return std::make_unique<RewriteTestAction>();
 #if CLANG_ENABLE_OBJC_REWRITER
-  case RewriteObjC:            return std::make_unique<RewriteObjCAction>();
+  case RewriteObjC:
+    return std::make_unique<RewriteObjCAction>();
 #else
-  case RewriteObjC:            Action = "RewriteObjC"; break;
+  case RewriteObjC:
+    Action = "RewriteObjC";
+    break;
 #endif
 #if CLANG_ENABLE_ARCMT
   case MigrateSource:
     return std::make_unique<arcmt::MigrateSourceAction>();
 #else
-  case MigrateSource:          Action = "MigrateSource"; break;
+  case MigrateSource:
+    Action = "MigrateSource";
+    break;
 #endif
 #if CLANG_ENABLE_STATIC_ANALYZER
-  case RunAnalysis:            return std::make_unique<ento::AnalysisAction>();
+  case RunAnalysis:
+    return std::make_unique<ento::AnalysisAction>();
 #else
-  case RunAnalysis:            Action = "RunAnalysis"; break;
+  case RunAnalysis:
+    Action = "RunAnalysis";
+    break;
 #endif
-  case RunPreprocessorOnly:    return std::make_unique<PreprocessOnlyAction>();
+  case RunPreprocessorOnly:
+    return std::make_unique<PreprocessOnlyAction>();
   case PrintDependencyDirectivesSourceMinimizerOutput:
     return std::make_unique<PrintDependencyDirectivesSourceMinimizerAction>();
   }
 
-#if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER \
-  || !CLANG_ENABLE_OBJC_REWRITER
+#if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER ||                    \
+    !CLANG_ENABLE_OBJC_REWRITER
   CI.getDiagnostics().Report(diag::err_fe_action_not_available) << Action;
   return 0;
 #else
@@ -156,10 +184,16 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
-std::unique_ptr<FrontendAction>
-CreateFrontendAction(CompilerInstance &CI) {
+// clang-format off
+// Cratels:根据CI的内容生成不同的前端Action
+// clang-format on
+std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
+  // clang-format off
+  // Cratels:创建Action对象,后面步骤为添加一些额外信息
+  // clang-format on
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
+
   if (!Act)
     return nullptr;
 
@@ -169,6 +203,9 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }
 
+  // clang-format off
+// Cratels:这里的宏可以在cmake命令行中进行配置,进而影响代码的编译流程
+// clang-format on
 #if CLANG_ENABLE_ARCMT
   if (CI.getFrontendOpts().ProgramAction != frontend::MigrateSource &&
       CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
@@ -183,17 +220,15 @@ CreateFrontendAction(CompilerInstance &CI) {
       Act = std::make_unique<arcmt::ModifyAction>(std::move(Act));
       break;
     case FrontendOptions::ARCMT_Migrate:
-      Act = std::make_unique<arcmt::MigrateAction>(std::move(Act),
-                                     FEOpts.MTMigrateDir,
-                                     FEOpts.ARCMTMigrateReportOut,
-                                     FEOpts.ARCMTMigrateEmitARCErrors);
+      Act = std::make_unique<arcmt::MigrateAction>(
+          std::move(Act), FEOpts.MTMigrateDir, FEOpts.ARCMTMigrateReportOut,
+          FEOpts.ARCMTMigrateEmitARCErrors);
       break;
     }
 
     if (FEOpts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-      Act = std::make_unique<arcmt::ObjCMigrateAction>(std::move(Act),
-                                                        FEOpts.MTMigrateDir,
-                                                        FEOpts.ObjCMTAction);
+      Act = std::make_unique<arcmt::ObjCMigrateAction>(
+          std::move(Act), FEOpts.MTMigrateDir, FEOpts.ObjCMTAction);
     }
   }
 #endif
@@ -213,13 +248,17 @@ CreateFrontendAction(CompilerInstance &CI) {
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
-    Act = std::make_unique<ASTMergeAction>(std::move(Act),
-                                            FEOpts.ASTMergeFiles);
+    Act =
+        std::make_unique<ASTMergeAction>(std::move(Act), FEOpts.ASTMergeFiles);
 
   return Act;
 }
 
+// clang-format off
+// Cratels:前摇终于结束了,这里开始执行具体编译流程
+// clang-format on
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
+  // Cratels:如果存在option -help,直接忽略其他所有option,打印help信息即可
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     driver::getDriverOptTable().printHelp(
@@ -233,6 +272,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -version.
   //
   // FIXME: Use a better -version message?
+  // Cratels:如果存在option -version,直接忽略其他所有option,打印版本信息即可
   if (Clang->getFrontendOpts().ShowVersion) {
     llvm::cl::PrintVersionMessage();
     return true;
@@ -244,9 +284,13 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   //
   // FIXME: Remove this, one day.
   // This should happen AFTER plugins have been loaded!
+  // clang-format off
+  // Cratels:-mllvm option后面的option是指定传递给llvm core模块的,类似地还有-mmlir
+  // Cratels:有一些参数必须使用该方法传递
+  // clang-format on
   if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
     Args[0] = "clang (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
@@ -290,10 +334,21 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getDiagnostics().hasErrorOccurred())
     return false;
   // Create and execute the frontend action.
+  // clang-format off
+  // Cratels:创建一个前端相关Action,信息来源自CreateFrontendAction(*Clang)中的参数Clang
+  // Cratels:Clang中有所有的option信息,需要执行哪种Action需要用户在option中指定,比如-ast-dump就是打印输出AST
+  // Cratels:这里其实理论上执行的移动或者拷贝构造方法,而不是构造方法
+  // clang-format on
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
     return false;
+
+  // clang-format off
+  // Cratels:ExecuteAction是一个虚函数,各个Action自己实现,我们这里可以去看看-ast-dump对应的Action的实现
+  // clang-format on
   bool Success = Clang->ExecuteAction(*Act);
+
+  // Cratels:
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));
   return Success;

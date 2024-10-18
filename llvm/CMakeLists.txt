@@ -1,16 +1,24 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
+# 设置当前项目支持的 cmake 最小版本
 cmake_minimum_required(VERSION 3.20.0)
 
+# 在 CMake 中，include(CMakeDependentOption) 是一个命令，用于包含 CMake 模块，该模块提供了 cmake_dependent_option() 函数。这个函数允许你创建一个依赖于其他选项的选项。这意味着你可以根据一个选项的值来启用或禁用另一个选项。
 include(CMakeDependentOption)
 
+# 设置LLVM_COMMON_CMAKE_UTILS指向最外侧 cmake 公共目录的路径，接下来直接使用
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
+# 将 cmake 后缀的公共文件加载到当前位置
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 # Builds with custom install names and installation rpath setups may not work
 # in the build tree. Allow these cases to use CMake's default build tree
 # behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.
+# 在 CMake 中，mark_as_advanced() 命令用于将缓存变量标记为高级变量。
+# 这意味着这些变量不会在 CMake GUI（图形用户界面）的默认视图中显示，也不会在命令行工具的默认配置输出中显示。
+# 这有助于清理 CMake GUI，使其不显示那些普通用户不需要或不太可能想要修改的变量。
 option(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE "If set, use CMake's default build tree install name directory logic (Darwin only)" OFF)
 mark_as_advanced(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
 if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
@@ -87,6 +95,7 @@ else()
 endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  # 如未设置 build-type 就直接报错，必须选一个
   message(FATAL_ERROR "
 No build type selected. You need to pass -DCMAKE_BUILD_TYPE=<type> in order to configure LLVM.
 Available options are:
@@ -271,6 +280,7 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
 endif()
 unset(SHOULD_ENABLE_PROJECT)
 
+# 设置 ccache，加快编译速度
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
@@ -330,6 +340,7 @@ if(LLVM_ENABLE_GISEL_COV)
 endif()
 
 # Add path for custom modules
+# 增加include 的搜索路径
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
@@ -1086,6 +1097,8 @@ set(LLVM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 # Produce the target definition files, which provide a way for clients to easily
 # include various classes of targets.
+
+# 使用 cmake 中的变量替换source 中的占位符并将结果写到 dest 中。dest 最终会被源码读取并使用
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/AsmPrinters.def.in
   ${LLVM_INCLUDE_DIR}/llvm/Config/AsmPrinters.def

@@ -766,12 +766,12 @@ using GenerateFn = llvm::function_ref<void(
 /// "-round-trip-args" and "-no-round-trip-args" command line flags, or via the
 /// ForceRoundTrip parameter.
 ///
-/// During round-trip, the command line arguments are parsed into a dummy
-/// CompilerInvocation, which is used to generate the command line arguments
-/// again. The real CompilerInvocation is then created by parsing the generated
-/// arguments, not the original ones. This (in combination with tests covering
-/// argument behavior) ensures the generated command line is complete (doesn't
-/// drop/mangle any arguments).
+/// During round-trip, the command line arguments are parsed into a
+/// dummy（虚拟的） CompilerInvocation, which is used to generate the command
+/// line arguments again. The real CompilerInvocation is then created by parsing
+/// the generated arguments, not the original ones. This (in combination with
+/// tests covering argument behavior) ensures the generated command line is
+/// complete (doesn't drop/mangle any arguments).
 ///
 /// Finally, we check the command line that was used to create the real
 /// CompilerInvocation instance. By default, we compare it to the command line
@@ -4856,13 +4856,29 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
+// clang-format off
+// Cratels:实际进行命令行解析的实现
+// clang-format on
+/**
+ * @brief
+ *
+ * @param Res 待写入 Invocation 对象
+ * @param CommandLineArgs 命令行参数列表
+ * @param Diags 诊断器
+ * @param Argv0 可执行文件路径
+ * @return true
+ * @return false
+ */
 bool CompilerInvocation::CreateFromArgsImpl(
     CompilerInvocation &Res, ArrayRef<const char *> CommandLineArgs,
     DiagnosticsEngine &Diags, const char *Argv0) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   // Parse the arguments.
+  // Cratels: 获取driver命令行参数解析表
   const OptTable &Opts = getDriverOptTable();
+
+  // Cratels:过滤出所有的cc1 系列 option
   llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
@@ -4982,6 +4998,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
                                         ArrayRef<const char *> CommandLineArgs,
                                         DiagnosticsEngine &Diags,
                                         const char *Argv0) {
+  // Cratels:虚拟临时 invocation
   CompilerInvocation DummyInvocation;
 
   return RoundTrip(

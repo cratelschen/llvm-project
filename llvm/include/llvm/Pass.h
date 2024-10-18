@@ -64,11 +64,17 @@ enum PassManagerType {
 
 // Different types of passes.
 enum PassKind {
+  // Cratels:regioin级别
   PT_Region,
+  // Cratels:循环级别
   PT_Loop,
+  // Cratels:方法级别
   PT_Function,
+  // Cratels:调用关系级别
   PT_CallGraphSCC,
+  // Cratels:module模块级别
   PT_Module,
+  // Cratels:pass管理器
   PT_PassManager
 };
 
@@ -92,12 +98,20 @@ enum class ThinOrFullLTOPhase {
 /// constrained passes described below.
 ///
 class Pass {
-  AnalysisResolver *Resolver = nullptr;  // Used to resolve analysis
+  // Cratels:AnalysisResolver用来处理Pass之间的分析依赖关系,Pass对象通过此接口从pass管理器中获得所有分析信息
+  AnalysisResolver *Resolver = nullptr; // Used to resolve analysis
+
+  // Cratels:当前pass的唯一识别id
   const void *PassID;
+
+  // Cratels:Pass类别,见上面enum定义
   PassKind Kind;
 
 public:
+  // Cratels:ctor,只需要指定id以及类型即可
   explicit Pass(PassKind K, char &pid) : PassID(&pid), Kind(K) {}
+
+  // Cratels:pass不可复制,不可赋值
   Pass(const Pass &) = delete;
   Pass &operator=(const Pass &) = delete;
   virtual ~Pass();
@@ -110,16 +124,16 @@ public:
   virtual StringRef getPassName() const;
 
   /// getPassID - Return the PassID number that corresponds to this pass.
-  AnalysisID getPassID() const {
-    return PassID;
-  }
+  AnalysisID getPassID() const { return PassID; }
 
   /// doInitialization - Virtual method overridden by subclasses to do
   /// any necessary initialization before any pass is run.
-  virtual bool doInitialization(Module &)  { return false; }
+  // Cratels:子类实现,执行必要的初始化操作,参数为module
+  virtual bool doInitialization(Module &) { return false; }
 
   /// doFinalization - Virtual method overriden by subclasses to do any
   /// necessary clean up after all passes have run.
+  // Cratels:Pass子类实现,主要做清理工作
   virtual bool doFinalization(Module &) { return false; }
 
   /// print - Print out the internal state of the pass.  This is called by
@@ -128,8 +142,10 @@ public:
   /// null.  This automatically forwards to a virtual function that does not
   /// provide the Module* in case the analysis doesn't need it it can just be
   /// ignored.
+  // Cratels:打印pass的内部状态
   virtual void print(raw_ostream &OS, const Module *M) const;
 
+  // Cratels:输出
   void dump() const; // dump - Print to stderr.
 
   /// createPrinterPass - Get a Pass appropriate to print the IR this
@@ -139,8 +155,8 @@ public:
 
   /// Each pass is responsible for assigning a pass manager to itself.
   /// PMS is the stack of available pass manager.
-  virtual void assignPassManager(PMStack &,
-                                 PassManagerType) {}
+  // Cratels:分配pass管理器,一个pass不能绑定多个passManager吗?
+  virtual void assignPassManager(PMStack &, PassManagerType) {}
 
   /// Check if available pass managers are suitable for this pass or not.
   virtual void preparePassManager(PMStack &);
@@ -148,16 +164,23 @@ public:
   ///  Return what kind of Pass Manager can manage this pass.
   virtual PassManagerType getPotentialPassManagerType() const;
 
+  // Cratels: *****************************************************************
   // Access AnalysisResolver
   void setResolver(AnalysisResolver *AR);
+
   AnalysisResolver *getResolver() const { return Resolver; }
 
   /// getAnalysisUsage - This function should be overriden by passes that need
   /// analysis information to do their job.  If a pass specifies that it uses a
   /// particular analysis result to this function, it can then use the
   /// getAnalysis<AnalysisType>() function, below.
+  // clang-format off
+  // Cratels:如果一个主pass A需要知道另外一个分析pass B的分析结果才能继续工作,Pass A就必须实现该方法.
+  // Cratels:实现该方法的Pass可以通过下面的getAnalysis<AnalysisType>()方法来获得分析结果
+  // clang-format on
   virtual void getAnalysisUsage(AnalysisUsage &) const;
 
+  // Cratels: ******************************************************************
   /// releaseMemory() - This member can be implemented by a pass if it wants to
   /// be able to release its memory when it is no longer needed.  The default
   /// behavior of passes is to hold onto memory for the entire duration of their
@@ -175,7 +198,9 @@ public:
   /// override this to adjust the this pointer as needed for the specified pass
   /// info.
   virtual void *getAdjustedAnalysisPointer(AnalysisID ID);
+
   virtual ImmutablePass *getAsImmutablePass();
+
   virtual PMDataManager *getAsPMDataManager();
 
   /// verifyAnalysis() - This member can be implemented by a analysis pass to
@@ -204,8 +229,9 @@ public:
   /// the case when the analysis is not available.  This method is often used by
   /// transformation APIs to update analysis results for a pass automatically as
   /// the transform is performed.
-  template<typename AnalysisType> AnalysisType *
-    getAnalysisIfAvailable() const; // Defined in PassAnalysisSupport.h
+  template <typename AnalysisType>
+  AnalysisType *
+  getAnalysisIfAvailable() const; // Defined in PassAnalysisSupport.h
 
   /// mustPreserveAnalysisID - This method serves the same function as
   /// getAnalysisIfAvailable, but works if you just have an AnalysisID.  This
@@ -217,7 +243,7 @@ public:
   /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
   /// to the analysis information that they claim to use by overriding the
   /// getAnalysisUsage function.
-  template<typename AnalysisType>
+  template <typename AnalysisType>
   AnalysisType &getAnalysis() const; // Defined in PassAnalysisSupport.h
 
   template <typename AnalysisType>
@@ -225,7 +251,7 @@ public:
   getAnalysis(Function &F,
               bool *Changed = nullptr); // Defined in PassAnalysisSupport.h
 
-  template<typename AnalysisType>
+  template <typename AnalysisType>
   AnalysisType &getAnalysisID(AnalysisID PI) const;
 
   template <typename AnalysisType>

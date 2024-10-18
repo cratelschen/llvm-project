@@ -85,8 +85,8 @@ class Timer {
   bool Triggered = false;   ///< Has the timer ever been triggered?
   TimerGroup *TG = nullptr; ///< The TimerGroup this Timer is in.
 
-  Timer **Prev = nullptr;   ///< Pointer to \p Next of previous timer in group.
-  Timer *Next = nullptr;    ///< Next timer in the group.
+  Timer **Prev = nullptr; ///< Pointer to \p Next of previous timer in group.
+  Timer *Next = nullptr;  ///< Next timer in the group.
 public:
   explicit Timer(StringRef TimerName, StringRef TimerDescription) {
     init(TimerName, TimerDescription);
@@ -145,14 +145,14 @@ class TimeRegion {
   TimeRegion(const TimeRegion &) = delete;
 
 public:
-  explicit TimeRegion(Timer &t) : T(&t) {
-    T->startTimer();
-  }
+  explicit TimeRegion(Timer &t) : T(&t) { T->startTimer(); }
   explicit TimeRegion(Timer *t) : T(t) {
-    if (T) T->startTimer();
+    if (T)
+      T->startTimer();
   }
   ~TimeRegion() {
-    if (T) T->stopTimer();
+    if (T)
+      T->stopTimer();
   }
 };
 
@@ -162,14 +162,18 @@ public:
 /// used for debugging and for hunting performance problems.
 struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
-                            StringRef GroupName,
-                            StringRef GroupDescription, bool Enabled = true);
+                            StringRef GroupName, StringRef GroupDescription,
+                            bool Enabled = true);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
 /// report that is printed when the TimerGroup is destroyed.  It is illegal to
 /// destroy a TimerGroup object before all of the Timers in it are gone.  A
 /// TimerGroup can be specified for a newly created timer in its constructor.
+// clang-format off
+// Cratels:llvm::TimerGroup 是 LLVM 库中的一个类，它用于组织和管理一系列的计时器。在 LLVM 的开发过程中，开发者经常需要测量不同阶段的编译时间，以优化编译流程和代码。
+// llvm::TimerGroup 提供了一种方式来收集和分析这些计时器数据。
+// clang-format on
 class TimerGroup {
   struct PrintRecord {
     TimeRecord Time;
@@ -180,11 +184,9 @@ class TimerGroup {
     PrintRecord &operator=(const PrintRecord &Other) = default;
     PrintRecord(const TimeRecord &Time, const std::string &Name,
                 const std::string &Description)
-      : Time(Time), Name(Name), Description(Description) {}
+        : Time(Time), Name(Name), Description(Description) {}
 
-    bool operator <(const PrintRecord &Other) const {
-      return Time < Other.Time;
-    }
+    bool operator<(const PrintRecord &Other) const { return Time < Other.Time; }
   };
   std::string Name;
   std::string Description;
@@ -245,8 +247,8 @@ private:
   void removeTimer(Timer &T);
   void prepareToPrintList(bool reset_time = false);
   void PrintQueuedTimers(raw_ostream &OS);
-  void printJSONValue(raw_ostream &OS, const PrintRecord &R,
-                      const char *suffix, double Value);
+  void printJSONValue(raw_ostream &OS, const PrintRecord &R, const char *suffix,
+                      double Value);
 };
 
 } // end namespace llvm

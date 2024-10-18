@@ -475,6 +475,7 @@ public:
       return false;
 
     // Construct a new model around the instance returned by the builder.
+    // Cratels:返回的是智能指针,这里 reset 其实就是重新赋值的意思
     PassPtr.reset(new PassModelT(PassBuilder()));
     return true;
   }

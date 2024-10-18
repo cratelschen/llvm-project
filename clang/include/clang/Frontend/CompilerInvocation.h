@@ -203,6 +203,9 @@ private:
 
 class CowCompilerInvocation;
 
+// clang-format off
+// Cratels:抽象类，持有编译器调用所需的数据，包括包含路径、代码生成选项、警告标志等。
+// clang-format on
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the

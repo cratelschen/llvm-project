@@ -65,7 +65,7 @@ using namespace llvm::opt;
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
-  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
+  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine *>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
 
@@ -141,7 +141,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo->getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
@@ -163,7 +163,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   return 0;
 }
 
-static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
+static int PrintEnabledExtensions(const TargetOptions &TargetOpts) {
   std::string Error;
   const llvm::Target *TheTarget =
       llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
@@ -178,7 +178,9 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU,
+                                     FeaturesStr, BackendOptions,
+                                     std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
@@ -186,7 +188,7 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
   const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+      MCInfo->getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
@@ -209,18 +211,40 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   return 0;
 }
 
+// clang-format off
+// Cratels:作为真正编译器使用,不包括链接过程
+// clang-format on
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
+  llvm::outs() << "传递给cc1_main的参数...\n";
+  for (const auto *option : Argv) {
+    llvm::outs() << option << " ";
+  }
+  llvm::outs() << "\n";
+
+  llvm::outs() << Argv0 << "\n";
+
   ensureSufficientStack();
 
+  // clang-format off
+  // Cratels:Clang 对象是编译器的实例，拥有编译器进行一次编译的所有信息
+  // Cratels:但现在并不是所有信息都准备好了，会在后续的过程中根据 option 去填充 Clang 对象
+  // clang-format on
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
+  // clang-format off
+  // Cratels:PCH通过将头文件提前编译并缓存的方式来减少编译的时间，提前编译的结果需要容器来持有，这里就是在设置这个容器
+  // clang-format on
   auto PCHOps = Clang->getPCHContainerOperations();
+  // Cratels:这个容器可以读取已有 PCH 文件，也能写入 PCH 文件到容器中
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
   // Initialize targets first, so that --version shows registered targets.
+  // clang-format off
+  // Cratels:初始化与目标机器相关的一些信息
+  // clang-format on
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
@@ -228,18 +252,37 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
+  // Cratels:新建一个诊断信息管理引擎
+  // Cratels:IntrusiveRefCntPtr是一个智能指针,它指向的对象是通过引用计数来自动管理的,一旦引用计数为0则该对象就会被回收内存
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  // Cratels:存储诊断信息
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
+  // Cratels:新建诊断引擎
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
+  // clang-format off
+  // Cratels:`-Rround-trip-cc1-args` 是 GCC 编译器的一个选项，用于在编译过程中保留某些特定的编译器参数。
+  // Cratels:GCC 编译器在处理源代码时，会生成一些中间文件，比如汇编文件（.s 文件）和目标文件（.o 文件）。
+  // Cratels:这些中间文件可能需要特定的编译器参数来生成，而这些参数在后续的编译阶段可能会丢失。
+  // Cratels:`-Rround-trip-cc1-args` 选项的作用就是确保这些特定的编译器参数在生成中间文件时被保留，并在后续的编译阶段重新使用。
+  // Cratels: 这样做的目的是为了确保生成的中间文件能够正确地被后续的编译阶段处理。
+  // Cratels: 总之，`-Rround-trip-cc1-args` 选项在处理 GCC 编译器生成的中间文件时非常有用，可以确保编译过程的正确性和一致性。
+  // clang-format on
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
                       diag::Severity::Remark, {});
 
+  // clang-format off
+  // Cratels:CreateFromArgs从 Args中解析所有命令行数据并将其写回到 Clang的 Invocation 属性中
+  // Cratels:Invocation 抽象了一个编译器的调用过程
+  // clang-format on
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
+  // clang-format off
+  // Cratels:根据解析出来的 option 来进行对应的处理，比如是否计时，是否打印出支持的 CPU 的信息等等
+  // clang-format on
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
@@ -257,11 +300,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getFrontendOpts().PrintEnabledExtensions)
     return PrintEnabledExtensions(Clang->getTargetOpts());
 
+  // clang-format off
+  // Cratels:推导出系统默认的 include 路径如果未指定的话
+  // clang-format on
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -270,8 +316,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success) {
@@ -282,6 +328,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Execute the frontend actions.
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+
+    // clang-format off
+    // Cratels:执行编译器（Compilance）的一次编译（Invocation）
+    // clang-format on
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 
@@ -320,6 +370,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::remove_fatal_error_handler();
 
   // When running with -disable-free, don't do any destruction or shutdown.
+  // clang-format off
+  // Cratels:可以控制一次编译器编译之后 Clang 对象不销毁
+  // clang-format on
   if (Clang->getFrontendOpts().DisableFree) {
     llvm::BuryPointer(std::move(Clang));
     return !Success;

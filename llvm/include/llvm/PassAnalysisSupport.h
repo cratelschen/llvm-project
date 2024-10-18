@@ -154,9 +154,17 @@ public:
 /// analysis information out of pass manager that is responsible to manage
 /// the pass.
 ///
+
+// clang-format off
+// Cratels:AnalysisResolver - Pass对象使用的简单接口，从负责管理pass的pass管理器中提取所有分析信息。
+// clang-format on
 class AnalysisResolver {
 public:
+  // Cratels:不允许无参构造
   AnalysisResolver() = delete;
+
+  // Cratels:AnalysisResolver构造时必须传入
+  // PM信息管理类,他要处理的信息就来自于这个类
   explicit AnalysisResolver(PMDataManager &P) : PM(P) {}
 
   PMDataManager &getPMDataManager() { return PM; }

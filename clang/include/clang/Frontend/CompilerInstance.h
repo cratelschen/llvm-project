@@ -35,7 +35,7 @@ namespace llvm {
 class raw_fd_ostream;
 class Timer;
 class TimerGroup;
-}
+} // namespace llvm
 
 namespace clang {
 class ASTContext;
@@ -58,6 +58,9 @@ class SourceManager;
 class TargetInfo;
 enum class DisableValidationForModuleKind;
 
+// clang-format off
+// Cratels:工具类，用于维护 clang 编译器的单例模式
+// clang-format on
 /// CompilerInstance - Helper class for managing a single instance of the Clang
 /// compiler.
 ///
@@ -65,8 +68,12 @@ enum class DisableValidationForModuleKind;
 ///  (1) It manages the various objects which are necessary to run the compiler,
 ///      for example the preprocessor, the target information, and the AST
 ///      context.
+///      // Cratels:持有运行编译器所需的大量对象，比如预处理器，target 信息以及
+///      AST
+///      上下文信息等。
 ///  (2) It provides utility routines for constructing and manipulating the
 ///      common Clang objects.
+///      // Cratels:提供大量工具路径来构建或是操作公共 Clang 对象
 ///
 /// The compiler instance generally owns the instance of all the objects that it
 /// manages. However, clients can still share objects by manually setting the
@@ -76,59 +83,82 @@ enum class DisableValidationForModuleKind;
 /// in to the compiler instance for everything. When possible, utility functions
 /// come in two forms; a short form that reuses the CompilerInstance objects,
 /// and a long form that takes explicit instances of any required objects.
+// Cratels:
+/// 编译器实例通常拥有它管理的所有对象的实例。然而，在销毁CompilerInstance之前，客户端仍然可以通过手动设置对象并夺回所有权来共享对象。
+/// 编译器实例旨在简化客户端，而不是将它们锁定在编译器实例中。在可能的情况下，实用函数有两种形式；一种是重复使用CompilerInstance对象，
+/// 一种是获取任何所需对象的显式实例。
 class CompilerInstance : public ModuleLoader {
   /// The options used in this compiler instance.
+  // Cratels:编译器调用的抽象表示
   std::shared_ptr<CompilerInvocation> Invocation;
 
   /// The diagnostics engine instance.
+  // Cratels:诊断信息引擎
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
 
   /// The target being compiled for.
+  // Cratels:target 信息持有类
   IntrusiveRefCntPtr<TargetInfo> Target;
 
   /// Auxiliary Target info.
+  // Cratels:target 信息持有辅助类
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
   /// The file manager.
+  // Cratels:文件管理器
   IntrusiveRefCntPtr<FileManager> FileMgr;
 
   /// The source manager.
+  // Cratels:源码管理器
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
+  // Cratels:module 缓存类
   IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
 
   /// The preprocessor.
+  // Cratels:预处理器
   std::shared_ptr<Preprocessor> PP;
 
   /// The AST context.
+  // Cratels:AST 上下文信息持有类
   IntrusiveRefCntPtr<ASTContext> Context;
 
   /// An optional sema source that will be attached to sema.
+  // Cratels:额外的 sema 来源
   IntrusiveRefCntPtr<ExternalSemaSource> ExternalSemaSrc;
 
   /// The AST consumer.
+  // Cratels:AST消费类，目前生成的 AST 树怎么去使用
   std::unique_ptr<ASTConsumer> Consumer;
 
   /// The code completion consumer.
+  // Cratels:代码补全消费类
+  // TODO:
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
 
   /// The semantic analysis object.
+  // Cratels:语法分析器
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
+  // Cratels:前端时间管理器，用于计时各阶段的执行时间
   std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
 
   /// The frontend timer.
+  // Cratels:时间
   std::unique_ptr<llvm::Timer> FrontendTimer;
 
   /// The ASTReader, if one exists.
+  // Cratels:AST 读取
   IntrusiveRefCntPtr<ASTReader> TheASTReader;
 
   /// The module dependency collector for crashdumps
+  // Cratels:module 依赖关系收集器
   std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   /// The module provider.
+  // Cratels:PCH 容器操作
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
@@ -204,6 +234,7 @@ class CompilerInstance : public ModuleLoader {
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
+
 public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
@@ -213,7 +244,7 @@ public:
 
   /// @name High-Level Operations
   /// @{
-
+  // Cratels:执行CompileInvocation持有的 action
   /// ExecuteAction - Execute the provided action against the compiler's
   /// CompilerInvocation object.
   ///
@@ -270,9 +301,7 @@ public:
 
   /// Set the flag indicating whether we should (re)build the global
   /// module index.
-  void setBuildGlobalModuleIndex(bool Build) {
-    BuildGlobalModuleIndex = Build;
-  }
+  void setBuildGlobalModuleIndex(bool Build) { BuildGlobalModuleIndex = Build; }
 
   /// @}
   /// @name Forwarding Methods
@@ -280,9 +309,7 @@ public:
 
   AnalyzerOptions &getAnalyzerOpts() { return Invocation->getAnalyzerOpts(); }
 
-  CodeGenOptions &getCodeGenOpts() {
-    return Invocation->getCodeGenOpts();
-  }
+  CodeGenOptions &getCodeGenOpts() { return Invocation->getCodeGenOpts(); }
   const CodeGenOptions &getCodeGenOpts() const {
     return Invocation->getCodeGenOpts();
   }
@@ -308,9 +335,7 @@ public:
     return Invocation->getFileSystemOpts();
   }
 
-  FrontendOptions &getFrontendOpts() {
-    return Invocation->getFrontendOpts();
-  }
+  FrontendOptions &getFrontendOpts() { return Invocation->getFrontendOpts(); }
   const FrontendOptions &getFrontendOpts() const {
     return Invocation->getFrontendOpts();
   }
@@ -350,9 +375,7 @@ public:
     return Invocation->getPreprocessorOutputOpts();
   }
 
-  TargetOptions &getTargetOpts() {
-    return Invocation->getTargetOpts();
-  }
+  TargetOptions &getTargetOpts() { return Invocation->getTargetOpts(); }
   const TargetOptions &getTargetOpts() const {
     return Invocation->getTargetOpts();
   }
@@ -394,9 +417,7 @@ public:
   void setVerboseOutputStream(std::unique_ptr<raw_ostream> Value);
 
   /// Get the current stream for verbose output.
-  raw_ostream &getVerboseOutputStream() {
-    return *VerboseOutputStream;
-  }
+  raw_ostream &getVerboseOutputStream() { return *VerboseOutputStream; }
 
   /// @}
   /// @name Target Info
@@ -574,8 +595,8 @@ public:
   void setASTReader(IntrusiveRefCntPtr<ASTReader> Reader);
 
   std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const;
-  void setModuleDepCollector(
-      std::shared_ptr<ModuleDependencyCollector> Collector);
+  void
+  setModuleDepCollector(std::shared_ptr<ModuleDependencyCollector> Collector);
 
   std::shared_ptr<PCHContainerOperations> getPCHContainerOperations() const {
     return ThePCHContainerOperations;
@@ -701,11 +722,9 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
-                    DiagnosticConsumer *Client = nullptr,
-                    bool ShouldOwnClient = true,
-                    const CodeGenOptions *CodeGenOpts = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
+      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
+      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///
