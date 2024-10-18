@@ -45,11 +45,14 @@ namespace {
 
 class DriverOptTable : public PrecomputedOptTable {
 public:
+  // Cratels:InfoTable是静态常量数组，包括所有 option 的原始信息
+  // Cratels:PrefixTable是静态数组
   DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
 };
 }
 
 const llvm::opt::OptTable &clang::driver::getDriverOptTable() {
+  // Cratels:静态对象，只会初始化一次
   static DriverOptTable Table;
   return Table;
 }

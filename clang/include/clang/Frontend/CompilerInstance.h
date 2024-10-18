@@ -244,7 +244,7 @@ public:
 
   /// @name High-Level Operations
   /// @{
-
+  // Cratels:执行CompileInvocation持有的 action
   /// ExecuteAction - Execute the provided action against the compiler's
   /// CompilerInvocation object.
   ///

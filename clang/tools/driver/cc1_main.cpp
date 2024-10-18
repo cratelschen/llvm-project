@@ -227,6 +227,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // clang-format off
   // Cratels:Clang 对象是编译器的实例，拥有编译器进行一次编译的所有信息
+  // Cratels:但现在并不是所有信息都准备好了，会在后续的过程中根据 option 去填充 Clang 对象
   // clang-format on
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -260,8 +261,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
   // clang-format off
-  // Cratels:round-tri是指启用一个特殊的编译过程，该过程包括将源代码编译成中间代码，然后将中间代码反编译回源代码，最后再次编译源代码。这个过程被称为“round-trip”测试。
-  // Cratels:这个选项的主要目的是验证编译器的优化行为是否正确，即优化后的代码是否能够被编译器再次编译为相同的源代码。这对于确保编译器的质量和可靠性非常重要。
+  // Cratels:`-Rround-trip-cc1-args` 是 GCC 编译器的一个选项，用于在编译过程中保留某些特定的编译器参数。
+  // Cratels:GCC 编译器在处理源代码时，会生成一些中间文件，比如汇编文件（.s 文件）和目标文件（.o 文件）。
+  // Cratels:这些中间文件可能需要特定的编译器参数来生成，而这些参数在后续的编译阶段可能会丢失。
+  // Cratels:`-Rround-trip-cc1-args` 选项的作用就是确保这些特定的编译器参数在生成中间文件时被保留，并在后续的编译阶段重新使用。
+  // Cratels: 这样做的目的是为了确保生成的中间文件能够正确地被后续的编译阶段处理。
+  // Cratels: 总之，`-Rround-trip-cc1-args` 选项在处理 GCC 编译器生成的中间文件时非常有用，可以确保编译过程的正确性和一致性。
   // clang-format on
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
